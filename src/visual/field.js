@@ -1,0 +1,146 @@
+import { positions } from '../data/positions.js'
+import { getFormationById } from '../data/formations.js'
+import { getRouteById } from '../data/routes.js'
+import { getPlayById } from '../data/plays.js'
+
+const POS_COLORS = {
+  qb: '#ff6b6b',
+  center: '#feca57',
+  rb: '#48dbfb',
+  'wr-x': '#ff9ff3',
+  'wr-z': '#54a0ff',
+  slot: '#5f27cd',
+  te: '#1dd1a1',
+}
+
+/** Render an SVG football field with optional overlays */
+export function renderField(options = {}) {
+  const {
+    formationId,
+    highlightId,
+    routeId,
+    playId,
+    interactive = false,
+    onPositionClick,
+    className = '',
+  } = options
+
+  let spots = {}
+  let routes = []
+
+  if (playId) {
+    const play = getPlayById(playId)
+    const formation = play ? getFormationById(play.formationId) : null
+    if (formation) spots = { ...formation.spots }
+    if (play) {
+      routes = play.assignments.map((a) => {
+        const route = getRouteById(a.routeId)
+        const spot = spots[a.positionId] || { x: 50, y: 68 }
+        if (!route) return null
+        const offsetPath = route.path.map((p, i) =>
+          i === 0 ? spot : { x: spot.x + (p.x - 50), y: p.y }
+        )
+        return { positionId: a.positionId, path: offsetPath, routeId: a.routeId }
+      }).filter(Boolean)
+    }
+  } else if (formationId) {
+    const formation = getFormationById(formationId)
+    if (formation) spots = { ...formation.spots }
+  } else if (routeId) {
+    const route = getRouteById(routeId)
+    if (route) routes = [{ path: route.path, routeId }]
+    spots = { 'wr-x': { x: 50, y: 68 } }
+  } else {
+    positions.forEach((p) => {
+      if (p.fieldSpot) spots[p.id] = p.fieldSpot
+    })
+  }
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.setAttribute('viewBox', '0 0 100 100')
+  svg.setAttribute('class', `field-svg ${className}`)
+  svg.setAttribute('aria-label', 'Football field diagram')
+
+  svg.innerHTML = `
+    <rect x="0" y="0" width="100" height="22" fill="#2d6a4f" opacity="0.3" rx="1"/>
+    <text x="50" y="12" text-anchor="middle" fill="#fff" font-size="4" opacity="0.6">END ZONE</text>
+    <rect x="2" y="22" width="96" height="76" fill="#386641" rx="1"/>
+    ${yardLines()}
+    <line x1="2" y1="68" x2="98" y2="68" stroke="#feca57" stroke-width="0.6" stroke-dasharray="2,1"/>
+    <text x="50" y="67" text-anchor="middle" fill="#feca57" font-size="2.5" opacity="0.8">LINE OF SCRIMMAGE</text>
+    ${routePaths(routes)}
+    ${playerMarkers(spots, highlightId, interactive, onPositionClick)}
+  `
+
+  return svg
+}
+
+function yardLines() {
+  let lines = ''
+  for (let y = 30; y <= 90; y += 10) {
+    lines += `<line x1="2" y1="${y}" x2="98" y2="${y}" stroke="#fff" stroke-width="0.15" opacity="0.25"/>`
+  }
+  for (const x of [25, 50, 75]) {
+    lines += `<line x1="${x}" y1="22" x2="${x}" y2="98" stroke="#fff" stroke-width="0.1" opacity="0.15"/>`
+  }
+  return lines
+}
+
+function routePaths(routes) {
+  return routes
+    .map(({ path, routeId }) => {
+      const d = path.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+      return `<path d="${d}" fill="none" stroke="#fdcb6e" stroke-width="0.8" stroke-dasharray="1.5,0.8" marker-end="url(#arrow)" data-route="${routeId}"/>`
+    })
+    .join('')
+}
+
+function playerMarkers(spots, highlightId, interactive) {
+  return Object.entries(spots)
+    .map(([id, spot]) => {
+      const pos = positions.find((p) => p.id === id)
+      const label = pos?.shortName || id.toUpperCase()
+      const color = POS_COLORS[id] || '#dfe6e9'
+      const isHighlight = id === highlightId
+      const r = isHighlight ? 3.2 : 2.8
+      const cursor = interactive ? 'pointer' : 'default'
+      const stroke = isHighlight ? '#fff' : 'rgba(255,255,255,0.5)'
+      const sw = isHighlight ? 0.6 : 0.3
+      return `
+        <g class="player-marker ${interactive ? 'interactive' : ''}" data-position="${id}" style="cursor:${cursor}">
+          <circle cx="${spot.x}" cy="${spot.y}" r="${r}" fill="${color}" stroke="${stroke}" stroke-width="${sw}"
+            ${interactive ? `tabindex="0" role="button" aria-label="${pos?.name || id}"` : ''}/>
+          <text x="${spot.x}" y="${spot.y + 0.9}" text-anchor="middle" fill="#fff" font-size="2.2" font-weight="bold">${label}</text>
+        </g>`
+    })
+    .join('')
+}
+
+export function bindFieldInteraction(svg, onPositionClick) {
+  svg.querySelectorAll('.player-marker.interactive').forEach((g) => {
+    const id = g.dataset.position
+    const handler = () => onPositionClick?.(id)
+    g.addEventListener('click', handler)
+    g.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        handler()
+      }
+    })
+  })
+}
+
+export function injectFieldDefs(container) {
+  if (container.querySelector('#field-defs')) return
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  defs.setAttribute('id', 'field-defs')
+  defs.setAttribute('width', '0')
+  defs.setAttribute('height', '0')
+  defs.innerHTML = `
+    <defs>
+      <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fdcb6e"/>
+      </marker>
+    </defs>`
+  container.prepend(defs)
+}

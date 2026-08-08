@@ -1,0 +1,15 @@
+{
+  "name": "coach-b-under-the-tree-flag-football",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Learn flag football positions, formations, routes and plays — with lots of quizzing!",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

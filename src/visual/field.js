@@ -1,16 +1,16 @@
 import { positions } from '../data/positions.js'
 import { getFormationById } from '../data/formations.js'
-import { getRouteById } from '../data/routes.js'
+import { getRouteById, getRouteByNumber } from '../data/routes.js'
 import { getPlayById } from '../data/plays.js'
 
 const POS_COLORS = {
-  qb: '#ff6b6b',
-  center: '#feca57',
-  rb: '#48dbfb',
-  'wr-x': '#ff9ff3',
-  'wr-z': '#54a0ff',
-  slot: '#5f27cd',
-  te: '#1dd1a1',
+  X: '#eb6d20',
+  L: '#f4a261',
+  R: '#e9c46a',
+  Z: '#eb6d20',
+  H: '#2a9d8f',
+  C: '#6c757d',
+  Q: '#0d1167',
 }
 
 /** Render an SVG football field with optional overlays */
@@ -21,7 +21,6 @@ export function renderField(options = {}) {
     routeId,
     playId,
     interactive = false,
-    onPositionClick,
     className = '',
   } = options
 
@@ -32,16 +31,19 @@ export function renderField(options = {}) {
     const play = getPlayById(playId)
     const formation = play ? getFormationById(play.formationId) : null
     if (formation) spots = { ...formation.spots }
-    if (play) {
-      routes = play.assignments.map((a) => {
-        const route = getRouteById(a.routeId)
-        const spot = spots[a.positionId] || { x: 50, y: 68 }
-        if (!route) return null
-        const offsetPath = route.path.map((p, i) =>
-          i === 0 ? spot : { x: spot.x + (p.x - 50), y: p.y }
-        )
-        return { positionId: a.positionId, path: offsetPath, routeId: a.routeId }
-      }).filter(Boolean)
+    if (play?.parsed?.assignments) {
+      routes = Object.entries(play.parsed.assignments)
+        .map(([positionId, a]) => {
+          if (!a || a.routeNumber === undefined) return null
+          const route = getRouteByNumber(a.routeNumber)
+          const spot = spots[positionId] || { x: 50, y: 68 }
+          if (!route) return null
+          const offsetPath = route.path.map((p, i) =>
+            i === 0 ? spot : { x: spot.x + (p.x - 50), y: p.y }
+          )
+          return { positionId, path: offsetPath, routeId: route.id }
+        })
+        .filter(Boolean)
     }
   } else if (formationId) {
     const formation = getFormationById(formationId)
@@ -49,7 +51,7 @@ export function renderField(options = {}) {
   } else if (routeId) {
     const route = getRouteById(routeId)
     if (route) routes = [{ path: route.path, routeId }]
-    spots = { 'wr-x': { x: 50, y: 68 } }
+    spots = { X: { x: 50, y: 68 } }
   } else {
     positions.forEach((p) => {
       if (p.fieldSpot) spots[p.id] = p.fieldSpot
@@ -62,14 +64,14 @@ export function renderField(options = {}) {
   svg.setAttribute('aria-label', 'Football field diagram')
 
   svg.innerHTML = `
-    <rect x="0" y="0" width="100" height="22" fill="#2d6a4f" opacity="0.3" rx="1"/>
-    <text x="50" y="12" text-anchor="middle" fill="#fff" font-size="4" opacity="0.6">END ZONE</text>
+    <rect x="0" y="0" width="100" height="22" fill="#1b4332" opacity="0.35" rx="1"/>
+    <text x="50" y="12" text-anchor="middle" fill="#0d1167" font-size="4" opacity="0.55" font-weight="700">END ZONE</text>
     <rect x="2" y="22" width="96" height="76" fill="#386641" rx="1"/>
     ${yardLines()}
-    <line x1="2" y1="68" x2="98" y2="68" stroke="#feca57" stroke-width="0.6" stroke-dasharray="2,1"/>
-    <text x="50" y="67" text-anchor="middle" fill="#feca57" font-size="2.5" opacity="0.8">LINE OF SCRIMMAGE</text>
+    <line x1="2" y1="68" x2="98" y2="68" stroke="#eb6d20" stroke-width="0.6" stroke-dasharray="2,1"/>
+    <text x="50" y="67" text-anchor="middle" fill="#ffedd5" font-size="2.5" opacity="0.9">LINE OF SCRIMMAGE</text>
     ${routePaths(routes)}
-    ${playerMarkers(spots, highlightId, interactive, onPositionClick)}
+    ${playerMarkers(spots, highlightId, interactive)}
   `
 
   return svg
@@ -99,7 +101,7 @@ function playerMarkers(spots, highlightId, interactive) {
   return Object.entries(spots)
     .map(([id, spot]) => {
       const pos = positions.find((p) => p.id === id)
-      const label = pos?.shortName || id.toUpperCase()
+      const label = pos?.shortName || id
       const color = POS_COLORS[id] || '#dfe6e9'
       const isHighlight = id === highlightId
       const r = isHighlight ? 3.2 : 2.8

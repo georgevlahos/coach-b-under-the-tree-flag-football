@@ -64,7 +64,7 @@ function checkBadges(p) {
   if (p.totalCorrect >= 100) badges.add('touchdown')
   if (p.bestStreak >= 5) badges.add('hot-streak')
   if (p.bestStreak >= 10) badges.add('on-fire')
-  for (const cat of ['positions', 'formations', 'routes', 'plays']) {
+  for (const cat of ['routes', 'play-calls', 'formations']) {
     const c = p.byCategory[cat]
     if (c && c.correct >= 10) badges.add(`master-${cat}`)
   }
@@ -79,10 +79,9 @@ export const BADGE_INFO = {
   touchdown: { label: 'TOUCHDOWN!', emoji: '🏆' },
   'hot-streak': { label: 'Hot Streak (5)', emoji: '🔥' },
   'on-fire': { label: 'On Fire! (10)', emoji: '💥' },
-  'master-positions': { label: 'Position Pro', emoji: '🎯' },
-  'master-formations': { label: 'Formation Expert', emoji: '📐' },
   'master-routes': { label: 'Route Runner', emoji: '🏃‍♀️' },
-  'master-plays': { label: 'Play Caller', emoji: '📋' },
+  'master-play-calls': { label: 'Play Caller', emoji: '📢' },
+  'master-formations': { label: 'Formation Expert', emoji: '📐' },
 }
 
 export function resetProgress() {

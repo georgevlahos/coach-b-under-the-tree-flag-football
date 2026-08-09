@@ -1,8 +1,14 @@
-import { positions } from './data/positions.js'
+import { positions, getQuizPositions, getPositionById } from './data/positions.js'
 import { formations } from './data/formations.js'
-import { routes } from './data/routes.js'
+import { routes, formatRoute } from './data/routes.js'
 import { plays } from './data/plays.js'
 import { CATEGORIES, getQuestionsForCategory } from './data/questions.js'
+import {
+  DIFFICULTIES,
+  loadDifficulty,
+  saveDifficulty,
+  getDifficulty,
+} from './data/difficulty.js'
 import { loadProgress, BADGE_INFO, resetProgress } from './quiz/progress.js'
 import { QuizSession, renderQuiz } from './quiz/engine.js'
 import { renderField, injectFieldDefs } from './visual/field.js'
@@ -13,12 +19,18 @@ import {
   speakPlayCall,
 } from './audio/speech.js'
 
-/** @type {'home' | 'learn' | 'quiz' | 'progress' | 'play-call'} */
+/** @type {'home' | 'learn' | 'quiz' | 'progress'} */
 let currentPage = 'home'
-let learnTab = 'positions'
+let learnTab = 'routes'
 /** @type {QuizSession | null} */
 let activeSession = null
-let quizCategory = 'mixed'
+let quizCategory = 'routes'
+let quizCueMode = 'both'
+let quizCount = 10
+/** @type {string} */
+let quizPosition = 'X'
+/** @type {import('./data/difficulty.js').DifficultyId} */
+let quizDifficulty = loadDifficulty()
 
 const app = document.getElementById('app')
 
@@ -27,26 +39,27 @@ export function initApp() {
 }
 
 function render() {
+  const quizFit = currentPage === 'quiz'
   app.innerHTML = `
-    <div class="app-shell">
-      ${renderHeader()}
-      <main class="main-content">${renderPage()}</main>
+    <div class="app-shell ${quizFit ? 'quiz-fit' : ''}">
+      ${renderHeader(quizFit)}
+      <main class="main-content ${quizFit ? 'main-content--quiz' : ''}">${renderPage()}</main>
       ${renderNav()}
     </div>
   `
   bindEvents()
 }
 
-function renderHeader() {
+function renderHeader(compact = false) {
   const progress = loadProgress()
   const audioOn = isAudioModeEnabled()
   return `
-    <header class="site-header">
+    <header class="site-header ${compact ? 'site-header--compact' : ''}">
       <div class="header-brand">
         <span class="tree-icon">🌳</span>
         <div>
           <h1 class="site-title">Coach B</h1>
-          <p class="site-subtitle">Under the Tree — Flag Football</p>
+          ${compact ? '' : '<p class="site-subtitle">Under the Tree — Flag Football</p>'}
         </div>
       </div>
       <div class="header-stats">
@@ -71,7 +84,7 @@ function renderNav() {
   return `
     <nav class="bottom-nav">
       ${items.map((item) => `
-        <button class="nav-item ${currentPage === item.id || (currentPage === 'play-call' && item.id === 'learn') ? 'active' : ''}" data-page="${item.id}">
+        <button class="nav-item ${currentPage === item.id ? 'active' : ''}" data-page="${item.id}">
           <span class="nav-icon">${item.icon}</span>
           <span class="nav-label">${item.label}</span>
         </button>
@@ -86,7 +99,6 @@ function renderPage() {
     case 'learn': return renderLearn()
     case 'quiz': return renderQuizPage()
     case 'progress': return renderProgressPage()
-    case 'play-call': return renderPlayCallPractice()
     default: return renderHome()
   }
 }
@@ -94,42 +106,32 @@ function renderPage() {
 function renderHome() {
   return `
     <section class="hero">
-      <div class="hero-tree">🌳🏈</div>
-      <h2>Welcome, Player!</h2>
+      <p class="hero-kicker">Lake Zurich Flames · Girls Flag Football</p>
+      <h2 class="hero-brand">Coach B</h2>
       <p class="hero-text">
-        Learn flag football positions, formations, routes, and plays —
-        then test yourself with tons of quizzes!
+        Learn your routes and what to run when Coach calls a play.
       </p>
       <div class="hero-actions">
-        <button class="btn btn-primary btn-lg" data-action="start-quiz">Start a Quiz 🎯</button>
-        <button class="btn btn-secondary btn-lg" data-action="go-learn">Study First 📖</button>
+        <button class="btn btn-primary btn-lg" data-quiz-cat="routes">Test Me on Routes</button>
+        <button class="btn btn-secondary btn-lg" data-quiz-cat="play-calls">Test Me on Play Calls</button>
       </div>
-    </section>
-    <section class="home-cards">
-      ${CATEGORIES.filter((c) => c.id !== 'mixed').map((cat) => {
-        const p = loadProgress().byCategory[cat.id]
-        const pct = p ? Math.round((p.correct / Math.max(p.answered, 1)) * 100) : 0
-        return `
-          <button class="home-card" data-quiz-cat="${cat.id}" style="--card-color:${cat.color}">
-            <span class="home-card-emoji">${cat.emoji}</span>
-            <span class="home-card-label">${cat.label}</span>
-            <span class="home-card-stat">${p ? `${pct}% accuracy` : 'Not started'}</span>
-          </button>`
-      }).join('')}
+      <button class="btn btn-text" data-action="go-learn">Study first →</button>
     </section>
     <section class="feature-banner">
-      <p>🎧 <strong>Audio mode</strong> is ready! Toggle the speaker icon to hear Coach B's questions and play calls.</p>
+      <p>🔊 Toggle the speaker for audio play-call practice. You can also quiz with text-only cues.</p>
     </section>
   `
 }
 
 function renderLearn() {
   const tabs = [
-    { id: 'positions', label: 'Positions' },
-    { id: 'formations', label: 'Formations' },
     { id: 'routes', label: 'Routes' },
-    { id: 'plays', label: 'Plays' },
+    { id: 'formations', label: 'Formations' },
+    { id: 'plays', label: 'Play calls' },
+    { id: 'positions', label: 'Positions' },
   ]
+  const quizCat = learnTab === 'plays' ? 'play-calls' : learnTab === 'positions' ? 'routes' : learnTab
+  const quizLabel = learnTab === 'plays' ? 'play calls' : learnTab
   return `
     <section class="learn-page">
       <div class="learn-tabs">
@@ -137,7 +139,7 @@ function renderLearn() {
       </div>
       <div class="learn-content" id="learn-content">${renderLearnTab()}</div>
       <div class="learn-quiz-cta">
-        <button class="btn btn-primary" data-quiz-cat="${learnTab}">Quiz me on ${learnTab}! 🎯</button>
+        <button class="btn btn-primary" data-quiz-cat="${quizCat}">Quiz me on ${quizLabel}!</button>
       </div>
     </section>
   `
@@ -150,11 +152,12 @@ function renderLearnTab() {
         <article class="learn-card">
           <div class="learn-card-header">
             <span class="learn-emoji">${p.emoji}</span>
-            <h3>${p.name}</h3>
+            <h3>${p.shortName} — ${p.name}</h3>
           </div>
           <p>${p.description}</p>
           <p class="learn-job"><strong>Job:</strong> ${p.job}</p>
           <p class="learn-tip">💡 ${p.tip}</p>
+          ${p.quizEligible ? '' : '<p class="learn-muted">Not quizzed on play calls yet.</p>'}
         </article>
       `).join('')
     case 'formations':
@@ -163,58 +166,54 @@ function renderLearnTab() {
           <h3>${f.name}</h3>
           <div class="learn-field" data-formation="${f.id}"></div>
           <p>${f.description}</p>
-          <p class="learn-tip">💡 ${f.whenToUse}</p>
+          <p class="learn-tip"><strong>Listen for:</strong> ${f.listenFor}</p>
         </article>
       `).join('')
     case 'routes':
       return routes.map((r) => `
         <article class="learn-card">
           <div class="learn-card-header">
-            <h3>${r.name}</h3>
+            <h3>${formatRoute(r)}</h3>
             <span class="depth-badge depth-${r.depth}">${r.depth}</span>
           </div>
-          <p class="route-nick">${r.nickname}</p>
-          <div class="learn-field" data-route="${r.id}"></div>
+          <img class="route-learn-image" src="${r.image}" alt="${r.name} route" />
           <p>${r.description}</p>
-          <p class="learn-tip">💡 ${r.tip}</p>
         </article>
       `).join('')
     case 'plays':
-      return `
-        ${plays.map((play) => `
-          <article class="learn-card">
-            <h3>${play.name}</h3>
-            <div class="learn-field" data-play="${play.id}"></div>
-            <p>${play.description}</p>
-            <p><strong>Concept:</strong> ${play.concept}</p>
-            <p><strong>QB Read:</strong> ${play.qbRead}</p>
-            <p class="play-call-line">📢 "${play.audioCall}"</p>
-            <button class="btn btn-sm btn-secondary" data-hear-play="${play.id}">🔊 Hear the call</button>
-          </article>
-        `).join('')}
-        <div class="play-practice-cta">
-          <button class="btn btn-primary" data-action="play-call-practice">🎧 Play Call Practice Mode</button>
-        </div>
-      `
+      return plays.map((play) => `
+        <article class="learn-card">
+          <h3 class="play-call-title">${play.call}</h3>
+          <div class="learn-field" data-formation="${play.formationId}"></div>
+          <ul class="assignment-list">
+            ${['X', 'L', 'R', 'Z', 'H'].map((id) => {
+              const a = play.parsed.assignments[id]
+              return `<li><strong>${id}:</strong> ${a?.label || '—'}</li>`
+            }).join('')}
+          </ul>
+          <button class="btn btn-sm btn-secondary" data-hear-play="${play.id}">Hear the call</button>
+        </article>
+      `).join('')
     default:
       return ''
   }
 }
 
 function renderQuizPage() {
-  if (activeSession && !activeSession.isComplete) {
+  if (activeSession) {
     return `<div id="quiz-container"></div>`
   }
-  if (activeSession?.isComplete) {
-    return `<div id="quiz-container"></div>`
-  }
+
+  const playCallMode = quizCategory === 'play-calls'
+  const quizPositions = getQuizPositions()
+  const difficulty = getDifficulty(quizDifficulty)
 
   return `
     <section class="quiz-picker">
       <h2>Pick a Quiz</h2>
       <p class="quiz-picker-sub">How many questions?</p>
       <div class="count-picker">
-        ${[5, 10, 15, 20].map((n) => `<button class="btn btn-count ${n === 10 ? 'active' : ''}" data-count="${n}">${n}</button>`).join('')}
+        ${[5, 10, 15, 20].map((n) => `<button class="btn btn-count ${n === quizCount ? 'active' : ''}" data-count="${n}">${n}</button>`).join('')}
       </div>
       <div class="category-picker">
         ${CATEGORIES.map((cat) => `
@@ -224,7 +223,40 @@ function renderQuizPage() {
           </button>
         `).join('')}
       </div>
-      <button class="btn btn-primary btn-lg btn-start-quiz">Let's Go! 🏈</button>
+      <div class="difficulty-picker-block">
+        <p class="quiz-picker-sub">Difficulty</p>
+        <div class="difficulty-picker">
+          ${DIFFICULTIES.map((d) => `
+            <button class="btn btn-difficulty ${quizDifficulty === d.id ? 'active' : ''}" data-difficulty="${d.id}" title="${d.blurb}">
+              <span class="diff-label">${d.label}</span>
+              <span class="diff-blurb">${d.blurb}</span>
+            </button>
+          `).join('')}
+        </div>
+        <p class="position-picker-hint">Current: <strong>${difficulty.label}</strong> — ${difficulty.blurb}</p>
+      </div>
+      ${playCallMode ? `
+        <div class="position-picker-block">
+          <p class="quiz-picker-sub">Test yourself as</p>
+          <div class="position-picker">
+            ${quizPositions.map((p) => `
+              <button class="btn btn-position ${quizPosition === p.id ? 'active' : ''}" data-position="${p.id}" title="${p.name}">
+                ${p.shortName}
+              </button>
+            `).join('')}
+          </div>
+          <p class="position-picker-hint">You'll stay as <strong>${quizPosition}</strong> for every question.</p>
+        </div>
+        <div class="cue-picker">
+          <p class="quiz-picker-sub">Play-call cues</p>
+          <div class="count-picker">
+            <button class="btn btn-count ${quizCueMode === 'both' ? 'active' : ''}" data-cue="both">Text + Audio</button>
+            <button class="btn btn-count ${quizCueMode === 'text' ? 'active' : ''}" data-cue="text">Text only</button>
+            <button class="btn btn-count ${quizCueMode === 'audio' ? 'active' : ''}" data-cue="audio">Audio focus</button>
+          </div>
+        </div>
+      ` : ''}
+      <button class="btn btn-primary btn-lg btn-start-quiz">Let's Go!</button>
     </section>
   `
 }
@@ -243,7 +275,7 @@ function renderProgressPage() {
       </div>
       <h3>By Category</h3>
       <div class="category-progress">
-        ${CATEGORIES.filter((c) => c.id !== 'mixed').map((cat) => {
+        ${CATEGORIES.map((cat) => {
           const c = p.byCategory[cat.id] || { answered: 0, correct: 0 }
           const pct = c.answered ? Math.round((c.correct / c.answered) * 100) : 0
           return `
@@ -268,16 +300,6 @@ function renderProgressPage() {
   `
 }
 
-function renderPlayCallPractice() {
-  return `
-    <section class="play-call-page">
-      <h2>🎧 Play Call Practice</h2>
-      <p>Coach B will call a play — you identify it! (Audio mode recommended)</p>
-      <div id="play-call-quiz"></div>
-    </section>
-  `
-}
-
 function bindEvents() {
   injectFieldDefs(app)
 
@@ -294,27 +316,22 @@ function bindEvents() {
     })
   })
 
-  app.querySelector('[data-action="start-quiz"]')?.addEventListener('click', () => {
-    currentPage = 'quiz'
-    render()
-  })
-
   app.querySelector('[data-action="go-learn"]')?.addEventListener('click', () => {
     currentPage = 'learn'
     render()
-  })
-
-  app.querySelector('[data-action="play-call-practice"]')?.addEventListener('click', () => {
-    currentPage = 'play-call'
-    render()
-    startPlayCallQuiz()
   })
 
   app.querySelectorAll('[data-quiz-cat]').forEach((btn) => {
     btn.addEventListener('click', () => {
       quizCategory = btn.dataset.quizCat
       currentPage = 'quiz'
-      startQuiz(quizCategory, 10)
+      activeSession = null
+      // Play calls: pick position first. Routes/formations can start immediately.
+      if (quizCategory === 'play-calls') {
+        render()
+      } else {
+        startQuiz(quizCategory, quizCount)
+      }
     })
   })
 
@@ -329,7 +346,6 @@ function bindEvents() {
     const opts = {}
     if (el.dataset.formation) opts.formationId = el.dataset.formation
     if (el.dataset.route) opts.routeId = el.dataset.route
-    if (el.dataset.play) opts.playId = el.dataset.play
     el.appendChild(renderField(opts))
   })
 
@@ -349,19 +365,45 @@ function bindEvents() {
   app.querySelectorAll('.category-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       quizCategory = btn.dataset.cat
-      app.querySelectorAll('.category-btn').forEach((b) => b.classList.toggle('active', b === btn))
+      render()
     })
   })
 
-  app.querySelectorAll('.btn-count').forEach((btn) => {
+  app.querySelectorAll('.btn-count[data-count]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      app.querySelectorAll('.btn-count').forEach((b) => b.classList.toggle('active', b === btn))
+      quizCount = Number(btn.dataset.count)
+      app.querySelectorAll('.btn-count[data-count]').forEach((b) => b.classList.toggle('active', b === btn))
+    })
+  })
+
+  app.querySelectorAll('[data-position]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      quizPosition = btn.dataset.position
+      render()
+    })
+  })
+
+  app.querySelectorAll('[data-difficulty]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      quizDifficulty = /** @type {import('./data/difficulty.js').DifficultyId} */ (btn.dataset.difficulty)
+      saveDifficulty(quizDifficulty)
+      render()
+    })
+  })
+
+  app.querySelectorAll('.btn-count[data-cue]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      quizCueMode = btn.dataset.cue
+      app.querySelectorAll('.btn-count[data-cue]').forEach((b) => b.classList.toggle('active', b === btn))
+      if (quizCueMode === 'audio' || quizCueMode === 'both') setAudioMode(true)
+      if (quizCueMode === 'text') setAudioMode(false)
     })
   })
 
   app.querySelector('.btn-start-quiz')?.addEventListener('click', () => {
-    const count = Number(app.querySelector('.btn-count.active')?.dataset.count || 10)
-    startQuiz(quizCategory, count)
+    if (quizCueMode === 'audio' || quizCueMode === 'both') setAudioMode(true)
+    if (quizCueMode === 'text') setAudioMode(false)
+    startQuiz(quizCategory, quizCount)
   })
 
   app.querySelector('#reset-progress')?.addEventListener('click', () => {
@@ -374,6 +416,13 @@ function bindEvents() {
   if (activeSession) {
     const container = app.querySelector('#quiz-container')
     if (container) {
+      // Optionally hide written play-call cue in audio-focus mode
+      if (quizCueMode === 'audio' && activeSession.current?.category === 'play-calls') {
+        // strip visible cue after render via class on body
+        app.classList.add('cue-audio-focus')
+      } else {
+        app.classList.remove('cue-audio-focus')
+      }
       renderQuiz(container, activeSession, (action) => {
         if (action === 'retry') startQuiz(quizCategory, activeSession.questions.length)
         else {
@@ -387,26 +436,20 @@ function bindEvents() {
 }
 
 function startQuiz(category, count) {
-  const questions = getQuestionsForCategory(category, count)
-  activeSession = new QuizSession(questions, category)
+  const opts = category === 'play-calls' ? { positionId: quizPosition } : {}
+  const questions = getQuestionsForCategory(category, count, opts)
+  const pos = category === 'play-calls' ? getPositionById(quizPosition) : null
+  activeSession = new QuizSession(questions, category, {
+    positionId: pos?.id,
+    positionLabel: pos ? formatQuizPositionLabel(pos) : null,
+    difficultyId: quizDifficulty,
+  })
   currentPage = 'quiz'
   render()
 }
 
-function startPlayCallQuiz() {
-  const playQuestions = getQuestionsForCategory('plays', 8).filter((q) => q.id.startsWith('play-audio-'))
-  activeSession = new QuizSession(playQuestions, 'plays')
-  const container = app.querySelector('#play-call-quiz')
-  if (container) {
-    renderQuiz(container, activeSession, (action) => {
-      activeSession = null
-      if (action === 'home') currentPage = 'learn'
-      else currentPage = 'play-call'
-      render()
-      if (action === 'retry') startPlayCallQuiz()
-    })
-    if (isAudioModeEnabled() && activeSession.current) {
-      speakPlayCall(plays.find((p) => p.name === activeSession.current.answer) || plays[0])
-    }
-  }
+/** @param {{ id: string, shortName: string }} pos */
+function formatQuizPositionLabel(pos) {
+  if (pos.id === 'H') return `${pos.shortName} Halfback`
+  return `${pos.shortName} Receiver`
 }

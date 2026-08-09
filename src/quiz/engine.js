@@ -1,18 +1,34 @@
 import { recordAnswer } from './progress.js'
 import { renderField, bindFieldInteraction, injectFieldDefs } from '../visual/field.js'
-import { speakQuestion, speakFeedback, isAudioModeEnabled } from '../audio/speech.js'
+import {
+  speakQuestion,
+  speakFeedback,
+  isAudioModeEnabled,
+  replayQuestionAudio,
+} from '../audio/speech.js'
+import { getRouteById } from '../data/routes.js'
+import { getDifficulty } from '../data/difficulty.js'
 
 /** @typedef {import('../data/questions.js').QuizQuestion} QuizQuestion */
 
 export class QuizSession {
-  /** @param {QuizQuestion[]} questions @param {string} category */
-  constructor(questions, category) {
+  /**
+   * @param {QuizQuestion[]} questions
+   * @param {string} category
+   * @param {{ positionId?: string, positionLabel?: string, difficultyId?: string }} [opts]
+   */
+  constructor(questions, category, opts = {}) {
     this.questions = questions
     this.category = category
+    this.positionId = opts.positionId || null
+    this.positionLabel = opts.positionLabel || opts.positionId || null
+    this.difficultyId = opts.difficultyId || 'rookie'
     this.index = 0
     this.score = 0
+    this.consecutiveCorrect = 0
     this.answered = false
     this.selectedAnswer = null
+    this.timedOut = false
   }
 
   get current() {
@@ -27,6 +43,10 @@ export class QuizSession {
     return { current: this.index + 1, total: this.questions.length, score: this.score }
   }
 
+  get difficulty() {
+    return getDifficulty(this.difficultyId)
+  }
+
   /** @param {string | boolean} answer */
   submit(answer) {
     if (this.answered || this.isComplete) return null
@@ -34,15 +54,46 @@ export class QuizSession {
     const correct = checkAnswer(q, answer)
     this.answered = true
     this.selectedAnswer = answer
-    if (correct) this.score++
+    this.timedOut = false
+    if (correct) {
+      this.score++
+      this.consecutiveCorrect++
+    } else {
+      this.consecutiveCorrect = 0
+    }
     recordAnswer(q.category, correct)
-    return { correct, explanation: q.explanation }
+    return {
+      correct,
+      explanation: q.explanation,
+      consecutiveCorrect: this.consecutiveCorrect,
+      cheer: correct ? streakCheer(this.consecutiveCorrect) : null,
+      timedOut: false,
+    }
+  }
+
+  /** Auto-fail when the clock hits zero */
+  submitTimeout() {
+    if (this.answered || this.isComplete) return null
+    const q = this.current
+    this.answered = true
+    this.selectedAnswer = null
+    this.timedOut = true
+    this.consecutiveCorrect = 0
+    recordAnswer(q.category, false)
+    return {
+      correct: false,
+      explanation: q.explanation,
+      consecutiveCorrect: 0,
+      cheer: null,
+      timedOut: true,
+    }
   }
 
   next() {
     this.index++
     this.answered = false
     this.selectedAnswer = null
+    this.timedOut = false
   }
 }
 
@@ -53,9 +104,30 @@ function checkAnswer(q, answer) {
   return String(answer) === String(q.answer)
 }
 
+/** @param {number} streak */
+function streakCheer(streak) {
+  if (streak < 2) return null
+  if (streak >= 5) return 'On fire! 🔥 Keep it going!'
+  if (streak >= 3) return 'Awesome streak — great job!'
+  return 'Great job!'
+}
+
 /** @param {HTMLElement} container @param {QuizSession} session @param {() => void} onComplete */
 export function renderQuiz(container, session, onComplete) {
   container.innerHTML = ''
+  let timerId = null
+  let rafId = null
+
+  const clearTimers = () => {
+    if (timerId != null) {
+      clearTimeout(timerId)
+      timerId = null
+    }
+    if (rafId != null) {
+      cancelAnimationFrame(rafId)
+      rafId = null
+    }
+  }
 
   if (session.isComplete) {
     renderResults(container, session, onComplete)
@@ -64,24 +136,45 @@ export function renderQuiz(container, session, onComplete) {
 
   const q = session.current
   const { current, total, score } = session.progress
+  const difficulty = session.difficulty
+  const limitSec = difficulty.seconds
+  const isPlayCall = session.category === 'play-calls' || q.category === 'play-calls'
 
   const el = document.createElement('div')
-  el.className = 'quiz-card'
+  el.className = 'quiz-card quiz-card--fit'
   el.innerHTML = `
+    ${session.positionLabel ? `
+      <div class="quiz-position-banner" aria-live="polite">
+        <span class="quiz-position-label">Your position</span>
+        <span class="quiz-position-id">${session.positionLabel}</span>
+      </div>` : ''}
     <div class="quiz-header">
       <div class="quiz-progress-bar"><div class="quiz-progress-fill" style="width:${(current / total) * 100}%"></div></div>
       <div class="quiz-meta">
-        <span>Question ${current} of ${total}</span>
+        <span>Q ${current}/${total}</span>
         <span class="quiz-score">Score: ${score}</span>
       </div>
+      ${limitSec ? `
+        <div class="quiz-timer" aria-live="polite">
+          <div class="quiz-timer-track">
+            <div class="quiz-timer-fill" id="quiz-timer-fill"></div>
+          </div>
+          <span class="quiz-timer-label" id="quiz-timer-label">${limitSec}s</span>
+        </div>` : ''}
     </div>
-    <div class="quiz-prompt-area">
-      <p class="quiz-prompt">${q.prompt}</p>
-      ${q.hint && !session.answered ? `<p class="quiz-hint">💡 ${q.hint}</p>` : ''}
+    <div class="quiz-body">
+      <div class="quiz-prompt-area">
+        <div class="quiz-prompt">${q.prompt}</div>
+        ${q.hint && !session.answered ? `<p class="quiz-hint">💡 ${q.hint}</p>` : ''}
+        ${isPlayCall ? `
+          <button type="button" class="btn btn-sm btn-replay" id="btn-replay-call">
+            🔁 Hear call again
+          </button>` : ''}
+      </div>
+      <div class="quiz-visual" id="quiz-visual"></div>
+      <div class="quiz-answers" id="quiz-answers"></div>
+      <div class="quiz-feedback hidden" id="quiz-feedback"></div>
     </div>
-    <div class="quiz-visual" id="quiz-visual"></div>
-    <div class="quiz-answers" id="quiz-answers"></div>
-    <div class="quiz-feedback hidden" id="quiz-feedback"></div>
     <div class="quiz-actions" id="quiz-actions"></div>
   `
 
@@ -92,18 +185,45 @@ export function renderQuiz(container, session, onComplete) {
   const answersEl = el.querySelector('#quiz-answers')
   const feedbackEl = el.querySelector('#quiz-feedback')
   const actionsEl = el.querySelector('#quiz-actions')
+  const timerFill = el.querySelector('#quiz-timer-fill')
+  const timerLabel = el.querySelector('#quiz-timer-label')
 
   renderVisual(visualEl, q, session, (answer) => handleAnswer(answer))
   renderAnswers(answersEl, q, session)
   bindAnswerButtons(answersEl, (answer) => handleAnswer(answer))
 
+  el.querySelector('#btn-replay-call')?.addEventListener('click', () => {
+    replayQuestionAudio(q)
+  })
+
   if (isAudioModeEnabled()) {
     speakQuestion(q)
   }
 
-  function handleAnswer(answer) {
+  if (limitSec && timerFill && timerLabel) {
+    const started = performance.now()
+    const tick = (now) => {
+      if (session.answered) return
+      const elapsed = (now - started) / 1000
+      const left = Math.max(0, limitSec - elapsed)
+      const pct = (left / limitSec) * 100
+      timerFill.style.width = `${pct}%`
+      timerLabel.textContent = `${Math.ceil(left)}s`
+      if (left <= 0) {
+        handleAnswer(null, true)
+        return
+      }
+      rafId = requestAnimationFrame(tick)
+    }
+    rafId = requestAnimationFrame(tick)
+    timerId = setTimeout(() => handleAnswer(null, true), limitSec * 1000 + 30)
+  }
+
+  function handleAnswer(answer, fromTimeout = false) {
     if (session.answered) return
-    const result = session.submit(answer)
+    clearTimers()
+
+    const result = fromTimeout ? session.submitTimeout() : session.submit(answer)
     if (!result) return
 
     renderAnswers(answersEl, q, session)
@@ -111,14 +231,26 @@ export function renderQuiz(container, session, onComplete) {
       bindFieldInteraction(visualEl.querySelector('.field-svg'), null)
     }
 
+    el.classList.add('quiz-card--answered')
+    if (timerFill) timerFill.style.width = '0%'
+    if (timerLabel) timerLabel.textContent = result.timedOut ? 'Time!' : ''
+
+    const explanation = result.correct
+      ? String(result.explanation || '').replace(/^\s*Correct answer is:\s*(<br\s*\/?>)?\s*/i, '')
+      : result.explanation
+
     feedbackEl.classList.remove('hidden')
     feedbackEl.className = `quiz-feedback ${result.correct ? 'correct' : 'incorrect'}`
     feedbackEl.innerHTML = `
-      <p class="feedback-icon">${result.correct ? '✅' : '❌'}</p>
-      <p class="feedback-text">${result.explanation}</p>
+      <div class="feedback-top">
+        <span class="feedback-icon">${result.correct ? '✅' : '❌'}</span>
+        ${result.timedOut ? '<span class="feedback-cheer">Time\'s up!</span>' : ''}
+        ${result.cheer ? `<span class="feedback-cheer">${result.cheer}</span>` : ''}
+      </div>
+      <div class="feedback-text">${explanation}</div>
     `
 
-    if (isAudioModeEnabled()) speakFeedback(result.correct)
+    if (isAudioModeEnabled()) speakFeedback(result.correct, result.consecutiveCorrect)
 
     actionsEl.innerHTML = `
       <button class="btn btn-primary btn-next" id="btn-next">
@@ -126,6 +258,7 @@ export function renderQuiz(container, session, onComplete) {
       </button>
     `
     actionsEl.querySelector('#btn-next').addEventListener('click', () => {
+      clearTimers()
       session.next()
       renderQuiz(container, session, onComplete)
     })
@@ -136,8 +269,19 @@ function renderVisual(el, q, session, onAnswer) {
   el.innerHTML = ''
   if (!q.visual) return
 
+  if (q.visual.mode === 'route-image') {
+    const route = getRouteById(q.visual.routeId)
+    if (route?.image) {
+      el.innerHTML = `<img class="route-quiz-image" src="${route.image}" alt="Route diagram" />`
+    }
+    return
+  }
+
   const opts = { className: 'quiz-field' }
-  if (q.visual.mode === 'formation') opts.formationId = q.visual.formationId
+  if (q.visual.mode === 'formation') {
+    opts.formationId = q.visual.formationId
+    if (q.visual.highlightId) opts.highlightId = q.visual.highlightId
+  }
   if (q.visual.mode === 'route') opts.routeId = q.visual.routeId
   if (q.visual.mode === 'play') opts.playId = q.visual.playId
   if (q.visual.mode === 'position' || q.type === 'identify') {
@@ -181,7 +325,7 @@ function renderBtn(label, value, session) {
   if (session.answered) {
     const q = session.current
     if (String(value) === String(q.answer)) cls += ' answer-correct'
-    else if (String(value) === String(session.selectedAnswer)) cls += ' answer-wrong'
+    else if (session.selectedAnswer != null && String(value) === String(session.selectedAnswer)) cls += ' answer-wrong'
   }
   return `<button class="${cls}" data-value="${escapeAttr(String(value))}" ${disabled}>${label}</button>`
 }
@@ -205,6 +349,7 @@ function renderResults(container, session, onComplete) {
       <p class="results-score">${session.score} / ${session.questions.length}</p>
       <p class="results-pct">${pct}%</p>
       <p class="results-msg">${msg}</p>
+      <p class="results-difficulty">${session.difficulty.label} mode</p>
       <div class="results-actions">
         <button class="btn btn-primary" id="btn-retry">Try Again</button>
         <button class="btn btn-secondary" id="btn-home">Back Home</button>

@@ -1,10 +1,33 @@
-import { positions } from './positions.js'
+import { routes, formatRoute } from './routes.js'
 import { formations } from './formations.js'
-import { routes } from './routes.js'
 import { plays } from './plays.js'
-import { getFormationById } from './formations.js'
-import { getPositionById } from './positions.js'
-import { getRouteById } from './routes.js'
+import { getQuizPositions } from './positions.js'
+
+/**
+ * @typedef {Object} QuizQuestion
+ * @property {string} id
+ * @property {string} type
+ * @property {string} category
+ * @property {string} prompt
+ * @property {string} [hint]
+ * @property {string[]} [options]
+ * @property {string | boolean} answer
+ * @property {string} explanation
+ * @property {string} [audioPrompt]
+ * @property {Object} [visual]
+ */
+
+export const CATEGORIES = [
+  { id: 'routes', label: 'Test Me on Routes', emoji: '🏃', color: '#eb6d20' },
+  { id: 'play-calls', label: 'Test Me on Play Calls', emoji: '📢', color: '#0d1167' },
+  { id: 'formations', label: 'Formations (light)', emoji: '📐', color: '#3d5a80' },
+]
+
+/** @param {import('./routes.js').Route} route @param {string} [headline] */
+function routeExplanation(route, headline) {
+  const title = headline || `<strong>${formatRoute(route)}</strong>`
+  return `Correct answer is:<br>${title}<ul class="feedback-details"><li>${route.description}</li></ul>`
+}
 
 function shuffle(arr) {
   const a = [...arr]
@@ -15,225 +38,180 @@ function shuffle(arr) {
   return a
 }
 
-function pickWrong(options, correct, count = 3) {
-  return shuffle(options.filter((o) => o !== correct)).slice(0, count)
+function pickWrong(pool, correct, n = 3) {
+  return shuffle(pool.filter((x) => x !== correct)).slice(0, n)
 }
 
-/** Generate all quiz questions from content data */
-export function generateAllQuestions() {
-  const questions = []
+function routeNumberOptions(correctNum) {
+  const nums = routes.map((r) => String(r.number))
+  return shuffle([String(correctNum), ...pickWrong(nums, String(correctNum), 3)])
+}
 
-  // --- POSITIONS ---
-  positions.forEach((pos) => {
-    questions.push({
-      id: `pos-mc-${pos.id}`,
-      type: 'multiple-choice',
-      category: 'positions',
-      prompt: `What is the main job of the ${pos.shortName}?`,
-      hint: pos.description,
-      options: shuffle([
-        pos.job,
-        ...pickWrong(positions.map((p) => p.job), pos.job),
-      ]),
-      answer: pos.job,
-      explanation: `${pos.name}: ${pos.description} ${pos.tip}`,
-      audioPrompt: `What is the main job of the ${pos.name}?`,
-    })
+function routeNameOptions(correctName) {
+  const names = routes.map((r) => r.name)
+  return shuffle([correctName, ...pickWrong(names, correctName, 3)])
+}
 
-    questions.push({
-      id: `pos-id-${pos.id}`,
-      type: 'identify',
-      category: 'positions',
-      prompt: `Tap the ${pos.name} on the field!`,
-      answer: pos.id,
-      explanation: `That's the ${pos.name}! ${pos.tip}`,
-      audioPrompt: `Find the ${pos.name} on the field.`,
-      visual: { mode: 'position' },
-    })
-  })
+function generateRouteQuestions() {
+  /** @type {QuizQuestion[]} */
+  const qs = []
 
-  questions.push({
-    id: 'pos-tf-qb-leader',
-    type: 'true-false',
-    category: 'positions',
-    prompt: 'The Quarterback is the leader of the offense and calls the plays.',
-    answer: true,
-    explanation: 'Correct! The QB reads the defense, calls the play, and distributes the ball.',
-    audioPrompt: 'True or false: The Quarterback is the leader of the offense.',
-  })
-
-  questions.push({
-    id: 'pos-tf-center-snap',
-    type: 'true-false',
-    category: 'positions',
-    prompt: 'The Center is the only player who can snap the ball to start a play.',
-    answer: false,
-    explanation: 'In flag football, any player can snap — but the Center usually does it!',
-    audioPrompt: 'True or false: Only the Center can snap the ball.',
-  })
-
-  // --- FORMATIONS ---
-  formations.forEach((form) => {
-    questions.push({
-      id: `form-mc-${form.id}`,
-      type: 'multiple-choice',
-      category: 'formations',
-      prompt: `When would you use the ${form.name} formation?`,
-      options: shuffle([
-        form.whenToUse,
-        ...pickWrong(formations.map((f) => f.whenToUse), form.whenToUse),
-      ]),
-      answer: form.whenToUse,
-      explanation: `${form.name}: ${form.description}`,
-      audioPrompt: `When would you use the ${form.name} formation?`,
-    })
-
-    questions.push({
-      id: `form-id-${form.id}`,
-      type: 'multiple-choice',
-      category: 'formations',
-      prompt: `Which formation is shown on the field?`,
-      options: shuffle(formations.map((f) => f.name)),
-      answer: form.name,
-      explanation: `This is ${form.name}! ${form.description}`,
-      audioPrompt: 'Look at the formation on the field. What is it called?',
-      visual: { formationId: form.id, mode: 'formation' },
-    })
-  })
-
-  questions.push({
-    id: 'form-tf-spread-passing',
-    type: 'true-false',
-    category: 'formations',
-    prompt: 'The Spread formation spreads receivers wide to open up passing lanes.',
-    answer: true,
-    explanation: 'Yes! Spreading out forces defenders to cover more ground.',
-    audioPrompt: 'True or false: Spread formation helps passing.',
-  })
-
-  questions.push({
-    id: 'form-tf-trips-overload',
-    type: 'true-false',
-    category: 'formations',
-    prompt: 'Trips formation puts three receivers on the same side to overload the defense.',
-    answer: true,
-    explanation: 'Trips stacks three receivers on one side — a lot for defenders to handle!',
-    audioPrompt: 'True or false: Trips puts three receivers on one side.',
-  })
-
-  // --- ROUTES ---
-  routes.forEach((route) => {
-    questions.push({
-      id: `route-mc-${route.id}`,
+  for (const route of routes) {
+    qs.push({
+      id: `route-img-num-${route.id}`,
       type: 'multiple-choice',
       category: 'routes',
-      prompt: `Describe the ${route.name} route:`,
-      options: shuffle([
-        route.description,
-        ...pickWrong(routes.map((r) => r.description), route.description),
-      ]),
-      answer: route.description,
-      explanation: `${route.name} (${route.nickname}): ${route.tip}`,
-      audioPrompt: `Describe the ${route.name} route.`,
-      visual: { routeId: route.id, mode: 'route' },
+      prompt: 'What route number is this?',
+      options: routeNumberOptions(route.number),
+      answer: String(route.number),
+      explanation: routeExplanation(route),
+      visual: { mode: 'route-image', routeId: route.id },
     })
 
-    questions.push({
-      id: `route-depth-${route.id}`,
+    qs.push({
+      id: `route-img-name-${route.id}`,
       type: 'multiple-choice',
       category: 'routes',
-      prompt: `Is the ${route.name} route short, medium, or deep?`,
-      options: shuffle(['short', 'medium', 'deep']),
-      answer: route.depth,
-      explanation: `${route.name} is a ${route.depth} route. ${route.description}`,
-      audioPrompt: `Is ${route.name} a short, medium, or deep route?`,
+      prompt: 'What route name is this?',
+      options: routeNameOptions(route.name),
+      answer: route.name,
+      explanation: routeExplanation(route),
+      visual: { mode: 'route-image', routeId: route.id },
     })
-  })
 
-  questions.push({
-    id: 'route-tf-slant-timing',
-    type: 'true-false',
-    category: 'routes',
-    prompt: 'On a Slant route, the QB should wait until you finish your cut before throwing.',
-    answer: false,
-    explanation: 'Slant is a timing route — the QB throws BEFORE you cut! Anticipation is key.',
-    audioPrompt: 'True or false: On a slant, the QB waits until you cut.',
-  })
-
-  // --- PLAYS ---
-  plays.forEach((play) => {
-    const formation = getFormationById(play.formationId)
-    questions.push({
-      id: `play-mc-${play.id}`,
+    qs.push({
+      id: `route-num-to-name-${route.id}`,
       type: 'multiple-choice',
-      category: 'plays',
-      prompt: `What is the main concept of the "${play.name}" play?`,
-      options: shuffle([
-        play.concept,
-        ...pickWrong(plays.map((p) => p.concept), play.concept),
-      ]),
-      answer: play.concept,
-      explanation: `${play.name}: ${play.description}. QB read: ${play.qbRead}`,
-      audioPrompt: `What is the concept of the ${play.name} play?`,
+      category: 'routes',
+      prompt: `Route number ${route.number} is called…`,
+      options: routeNameOptions(route.name),
+      answer: route.name,
+      explanation: routeExplanation(route),
+      audioPrompt: `Route number ${route.number} is called what?`,
     })
 
-    questions.push({
-      id: `play-form-${play.id}`,
+    qs.push({
+      id: `route-name-to-num-${route.id}`,
       type: 'multiple-choice',
-      category: 'plays',
-      prompt: `Which formation does "${play.name}" use?`,
-      options: shuffle(formations.map((f) => f.name)),
-      answer: formation?.name,
-      explanation: `${play.name} runs out of ${formation?.name}. ${play.description}`,
-      audioPrompt: `Which formation does ${play.name} use?`,
+      category: 'routes',
+      prompt: `What number is the ${route.name} route?`,
+      options: routeNumberOptions(route.number),
+      answer: String(route.number),
+      explanation: routeExplanation(route, `<strong>${formatRoute(route)}</strong>`),
+      audioPrompt: `What number is the ${route.name} route?`,
     })
+  }
 
-    play.assignments.slice(0, 2).forEach((assign, i) => {
-      const pos = getPositionById(assign.positionId)
-      const route = getRouteById(assign.routeId)
-      if (!pos || !route) return
-      questions.push({
-        id: `play-assign-${play.id}-${i}`,
+  return qs
+}
+
+function generateFormationQuestions() {
+  return formations.flatMap((f) => [
+    {
+      id: `form-id-${f.id}`,
+      type: 'multiple-choice',
+      category: 'formations',
+      prompt: 'Which formation is this?',
+      options: shuffle(formations.map((x) => x.name)),
+      answer: f.name,
+      explanation: `${f.name}: ${f.description}`,
+      visual: { mode: 'formation', formationId: f.id },
+    },
+    {
+      id: `form-listen-${f.id}`,
+      type: 'multiple-choice',
+      category: 'formations',
+      prompt: `In ${f.name}, who listens for the first route number?`,
+      options: shuffle(['X and Z', 'L and R', 'Only H', 'C and Q']),
+      answer: 'X and Z',
+      explanation: `Outside receivers X and Z take the first number unless tagged. (${f.listenFor})`,
+    },
+  ])
+}
+
+function answerChoicesFor(assignment, parsed) {
+  const correct = assignment.label
+  const pool = new Set([correct])
+
+  for (const a of Object.values(parsed.assignments)) {
+    if (a?.label) pool.add(a.label)
+  }
+  for (const r of shuffle(routes).slice(0, 4)) {
+    pool.add(formatRoute(r))
+  }
+  pool.add('Reverse')
+  pool.add('Fake Reverse')
+  pool.add('motion left + 3 — Arrow')
+  pool.add('fake run left')
+
+  const wrong = shuffle([...pool].filter((x) => x !== correct)).slice(0, 3)
+  return shuffle([correct, ...wrong])
+}
+
+function generatePlayCallQuestions() {
+  /** @type {QuizQuestion[]} */
+  const qs = []
+
+  for (const play of plays) {
+    for (const pos of getQuizPositions()) {
+      const assignment = play.parsed.assignments[pos.id]
+      if (!assignment) continue
+
+      qs.push({
+        id: `pc-${play.id}-${pos.id}`,
         type: 'multiple-choice',
-        category: 'plays',
-        prompt: `In "${play.name}", what route does the ${pos.shortName} run?`,
-        options: shuffle(routes.map((r) => r.name)),
-        answer: route.name,
-        explanation: `${pos.shortName} runs a ${route.name} in ${play.name}. ${assign.note || ''}`,
-        audioPrompt: `In ${play.name}, what route does the ${pos.name} run?`,
-        visual: { playId: play.id, mode: 'play' },
+        category: 'play-calls',
+        prompt: `What do you do on this play call?<br><span class="play-call-cue">"${play.call}"</span>`,
+        options: answerChoicesFor(assignment, play.parsed),
+        answer: assignment.label,
+        explanation: `For ${pos.shortName} on "${play.call}": <strong>${assignment.label}</strong>.`,
+        audioPrompt: play.audioCall,
+        visual: { mode: 'formation', formationId: play.formationId, highlightId: pos.id },
+        meta: { playId: play.id, positionId: pos.id },
       })
-    })
+    }
+  }
 
-    questions.push({
-      id: `play-audio-${play.id}`,
-      type: 'multiple-choice',
-      category: 'plays',
-      prompt: `Coach B calls: "${play.audioCall}" — Which play is this?`,
-      options: shuffle(plays.map((p) => p.name)),
-      answer: play.name,
-      explanation: `"${play.audioCall}" = ${play.name}. ${play.concept}`,
-      audioPrompt: play.audioCall,
-      visual: { playId: play.id, mode: 'play' },
-    })
-  })
-
-  return questions
+  return qs
 }
 
-export const CATEGORIES = [
-  { id: 'positions', label: 'Positions', emoji: '🏈', color: '#e85d75' },
-  { id: 'formations', label: 'Formations', emoji: '📐', color: '#6c5ce7' },
-  { id: 'routes', label: 'Routes', emoji: '🏃‍♀️', color: '#00b894' },
-  { id: 'plays', label: 'Plays', emoji: '📋', color: '#fdcb6e' },
-  { id: 'mixed', label: 'Mixed Quiz', emoji: '🎯', color: '#0984e3' },
-]
+let _cache = null
 
-export function getQuestionsForCategory(categoryId, count = 10) {
+export function generateAllQuestions() {
+  if (_cache) return _cache
+  _cache = [
+    ...generateRouteQuestions(),
+    ...generatePlayCallQuestions(),
+    ...generateFormationQuestions(),
+  ]
+  return _cache
+}
+
+/**
+ * @param {string} categoryId
+ * @param {number} count
+ * @param {{ positionId?: string }} [opts]
+ */
+export function getQuestionsForCategory(categoryId, count, opts = {}) {
   const all = generateAllQuestions()
-  const filtered =
-    categoryId === 'mixed'
-      ? all
-      : all.filter((q) => q.category === categoryId)
-  return shuffle(filtered).slice(0, Math.min(count, filtered.length))
+  let pool = all
+
+  if (categoryId === 'routes') {
+    pool = all.filter((q) => q.category === 'routes')
+  } else if (categoryId === 'play-calls') {
+    const positionId = opts.positionId || 'X'
+    pool = all.filter(
+      (q) => q.category === 'play-calls' && q.meta?.positionId === positionId,
+    )
+    return shuffle(pool).slice(0, count)
+  } else if (categoryId === 'formations') {
+    pool = all.filter((q) => q.category === 'formations')
+  } else if (categoryId === 'mixed') {
+    const routesQ = shuffle(all.filter((q) => q.category === 'routes'))
+    const playsQ = getQuestionsForCategory('play-calls', Math.ceil(count * 0.5), opts)
+    pool = shuffle([...routesQ.slice(0, Math.ceil(count * 0.5)), ...playsQ])
+    return pool.slice(0, count)
+  }
+
+  return shuffle(pool).slice(0, count)
 }

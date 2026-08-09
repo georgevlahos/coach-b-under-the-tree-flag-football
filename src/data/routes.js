@@ -1,35 +1,35 @@
 /** @typedef {Object} Route
- * @property {string} id
+ * @property {string} id - route number as string ("0"–"9")
+ * @property {number} number
  * @property {string} name
- * @property {string} nickname
- * @property {string} description
  * @property {string} depth - short | medium | deep
- * @property {string} tip
- * @property {Array<{ x: number, y: number }>} path - SVG path points from line of scrimmage
+ * @property {string} description
+ * @property {string} image - public path to diagram
+ * @property {Array<{ x: number, y: number }>} path
  */
 
 /** @type {Route[]} */
 export const routes = [
   {
-    id: 'flat',
-    name: 'Flat',
-    nickname: 'The Check-Down',
-    description: 'Run straight toward the sideline at about 3–5 yards depth.',
+    id: '1',
+    number: 1,
+    name: 'Hitch',
     depth: 'short',
-    tip: 'Great safety valve — if nothing else is open, hit the flat!',
+    description: 'Run 5 yards and turn to the QB.',
+    image: '/routes/route-1-hitch.jpeg',
     path: [
       { x: 50, y: 68 },
-      { x: 35, y: 68 },
-      { x: 20, y: 65 },
+      { x: 50, y: 58 },
+      { x: 50, y: 60 },
     ],
   },
   {
-    id: 'slant',
+    id: '2',
+    number: 2,
     name: 'Slant',
-    nickname: 'The Quick Strike',
-    description: 'Take 3 steps forward, then cut sharply inside at a 45° angle.',
     depth: 'short',
-    tip: 'Timing route — QB throws before you cut!',
+    description: '3 steps, then cut toward the middle of the field.',
+    image: '/routes/route-2-slant.jpeg',
     path: [
       { x: 50, y: 68 },
       { x: 50, y: 62 },
@@ -37,25 +37,24 @@ export const routes = [
     ],
   },
   {
-    id: 'out',
-    name: 'Out',
-    nickname: 'The Sideline',
-    description: 'Run straight downfield, then break sharply toward the sideline at 5–10 yards.',
-    depth: 'medium',
-    tip: 'Plant your outside foot hard when you cut — sell the go route first!',
+    id: '3',
+    number: 3,
+    name: 'Arrow',
+    depth: 'short',
+    description: 'Release toward the sideline.',
+    image: '/routes/route-3-arrow.jpeg',
     path: [
       { x: 50, y: 68 },
-      { x: 50, y: 55 },
-      { x: 35, y: 55 },
+      { x: 32, y: 66 },
     ],
   },
   {
-    id: 'in',
-    name: 'In (Dig)',
-    nickname: 'The Crosser',
-    description: 'Run straight, then cut sharply toward the middle of the field.',
+    id: '4',
+    number: 4,
+    name: 'In',
     depth: 'medium',
-    tip: 'Also called a "dig" — find the soft spot between defenders.',
+    description: '5 yards up, then break toward the middle.',
+    image: '/routes/route-4-in.jpeg',
     path: [
       { x: 50, y: 68 },
       { x: 50, y: 55 },
@@ -63,86 +62,96 @@ export const routes = [
     ],
   },
   {
-    id: 'curl',
-    name: 'Curl (Hook)',
-    nickname: 'The Comeback',
-    description: 'Run downfield, stop, and turn back toward the QB.',
+    id: '5',
+    number: 5,
+    name: 'Out',
     depth: 'medium',
-    tip: 'Sit in the hole in the zone — QB will find you!',
+    description: '5 yards up, then break toward the sideline.',
+    image: '/routes/route-5-out.jpeg',
     path: [
       { x: 50, y: 68 },
-      { x: 50, y: 50 },
+      { x: 50, y: 55 },
+      { x: 32, y: 55 },
+    ],
+  },
+  {
+    id: '6',
+    number: 6,
+    name: 'Curl',
+    depth: 'medium',
+    description: '10 yards up, then turn back toward the QB.',
+    image: '/routes/route-6-curl.jpeg',
+    path: [
+      { x: 50, y: 68 },
+      { x: 50, y: 48 },
       { x: 50, y: 52 },
     ],
   },
   {
-    id: 'go',
-    name: 'Go (Streak / Fly)',
-    nickname: 'The Burner',
-    description: 'Run straight downfield as fast as you can — deep route!',
+    id: '7',
+    number: 7,
+    name: 'Wheel',
     depth: 'deep',
-    tip: 'Stack the defender — run right past them!',
+    description: 'Run an Arrow, then turn deep down the sideline.',
+    image: '/routes/route-7-wheel.jpeg',
+    path: [
+      { x: 50, y: 68 },
+      { x: 30, y: 66 },
+      { x: 28, y: 40 },
+      { x: 28, y: 28 },
+    ],
+  },
+  {
+    id: '8',
+    number: 8,
+    name: 'Post',
+    depth: 'deep',
+    description: '5 yards up, then deep toward the middle.',
+    image: '/routes/route-8-post.jpeg',
+    path: [
+      { x: 50, y: 68 },
+      { x: 50, y: 50 },
+      { x: 58, y: 28 },
+    ],
+  },
+  {
+    id: '9',
+    number: 9,
+    name: 'Corner',
+    depth: 'deep',
+    description: '5 yards up, then deep toward the corner.',
+    image: '/routes/route-9-corner.jpeg',
+    path: [
+      { x: 50, y: 68 },
+      { x: 50, y: 50 },
+      { x: 35, y: 28 },
+    ],
+  },
+  {
+    id: '0',
+    number: 0,
+    name: 'Vertical',
+    depth: 'deep',
+    description: 'Deep route — run straight downfield.',
+    image: '/routes/route-0-vertical.jpeg',
     path: [
       { x: 50, y: 68 },
       { x: 50, y: 45 },
       { x: 50, y: 25 },
     ],
   },
-  {
-    id: 'post',
-    name: 'Post',
-    nickname: 'The Deep Middle',
-    description: 'Run deep, then break at 45° toward the goalpost (middle of field).',
-    depth: 'deep',
-    tip: 'Named because you break toward the goal post!',
-    path: [
-      { x: 50, y: 68 },
-      { x: 50, y: 45 },
-      { x: 55, y: 25 },
-    ],
-  },
-  {
-    id: 'corner',
-    name: 'Corner',
-    nickname: 'The Flag',
-    description: 'Run deep, then break at 45° toward the corner of the end zone.',
-    depth: 'deep',
-    tip: 'One of the toughest routes to cover — stretch the field!',
-    path: [
-      { x: 50, y: 68 },
-      { x: 50, y: 45 },
-      { x: 35, y: 25 },
-    ],
-  },
-  {
-    id: 'wheel',
-    name: 'Wheel',
-    nickname: 'The Curve',
-    description: 'Start with a flat route, then turn upfield along the sideline.',
-    depth: 'deep',
-    tip: 'Looks like a flat at first — then you turn and go deep!',
-    path: [
-      { x: 50, y: 68 },
-      { x: 30, y: 65 },
-      { x: 25, y: 45 },
-      { x: 25, y: 25 },
-    ],
-  },
-  {
-    id: 'seam',
-    name: 'Seam',
-    nickname: 'The Alley',
-    description: 'Run straight down the seam between two defenders.',
-    depth: 'deep',
-    tip: 'Find the gap between the safety and linebacker!',
-    path: [
-      { x: 50, y: 68 },
-      { x: 50, y: 50 },
-      { x: 50, y: 30 },
-    ],
-  },
 ]
 
 export function getRouteById(id) {
-  return routes.find((r) => r.id === id)
+  return routes.find((r) => r.id === String(id) || r.number === Number(id))
+}
+
+export function getRouteByNumber(n) {
+  return routes.find((r) => r.number === Number(n))
+}
+
+export function formatRoute(routeOrNumber) {
+  const route = typeof routeOrNumber === 'object' ? routeOrNumber : getRouteByNumber(routeOrNumber)
+  if (!route) return String(routeOrNumber)
+  return `${route.number} — ${route.name}`
 }

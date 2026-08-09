@@ -6,16 +6,6 @@ Receivers need to know these cold. See also `positions.md` (who runs them) and `
 
 ---
 
-## Learning path
-
-We teach in this order:
-
-1. **Routes** — Wide receivers learn the routes they will run ← **this file**
-2. **Formations** — Where everyone lines up (Spread, Trips Left, Trips Right)
-3. **Plays** — Route combinations called from each formation (coming later)
-
----
-
 ## Route tree
 
 | Route Number | Route Name | Depth (short / medium / deep) |
@@ -29,100 +19,95 @@ We teach in this order:
 | 7            | Wheel      | deep                          |
 | 8            | Post       | deep                          |
 | 9            | Corner     | deep                          |
-| 10           | Vertical   | deep                          |
+| 0            | Vertical   | deep                          |
 
-Whiteboard overview:
-
-<img src="routes/routes-whiteboard-full.png" alt="Routes whiteboard" width="50%" />
-
----
 
 ### 1 — Hitch
 
-<img src="routes/route-1-hitch.jpeg" alt="1 Hitch" width="50%" />
+![1 Hitch](routes/route-1-hitch.jpeg)
 
 **Depth:** short
 
 **Details:**
-
+- Run 5 yards and turn to QB
 
 ### 2 — Slant
 
-<img src="routes/route-2-slant.jpeg" alt="2 Slant" width="50%" />
+![2 Slant](routes/route-2-slant.jpeg)
 
 **Depth:** short
 
 **Details:**
-
+- 3 steps, then go towards the middle of the field
 
 ### 3 — Arrow
 
-<img src="routes/route-3-arrow.jpeg" alt="3 Arrow" width="50%" />
+![3 Arrow](routes/route-3-arrow.jpeg)
 
 **Depth:** short
 
 **Details:**
-
+- run towards the sideline
 
 ### 4 — In
 
-<img src="routes/route-4-in.jpeg" alt="4 In" width="50%" />
+![4 In](routes/route-4-in.jpeg)
 
 **Depth:** medium
 
 **Details:**
-
+- 5 yards, then towards the middle of the field
 
 ### 5 — Out
 
-<img src="routes/route-5-out.jpeg" alt="5 Out" width="50%" />
+![5 Out](routes/route-5-out.jpeg)
 
 **Depth:** medium
 
 **Details:**
-
+- 5 yards, then run towards the sideline
 
 ### 6 — Curl
 
-<img src="routes/route-6-curl.jpeg" alt="6 Curl" width="50%" />
+![6 Curl](routes/route-6-curl.jpeg)
 
 **Depth:** medium
 
 **Details:**
-
+- 10 yards, then turn towards the QB
 
 ### 7 — Wheel
 
-<img src="routes/route-7-wheel.jpeg" alt="7 Wheel" width="50%" />
+![7 Wheel](routes/route-7-wheel.jpeg)
 
 **Depth:** deep
 
 **Details:**
-
+- run Arrow route, then head deep down the sideline
 
 ### 8 — Post
 
-<img src="routes/route-8-post.jpeg" alt="8 Post" width="50%" />
+![8 Post](routes/route-8-post.jpeg)
 
 **Depth:** deep
 
 **Details:**
-
+- 5 yards, then deep middle
 
 ### 9 — Corner
 
-<img src="routes/route-9-corner.jpeg" alt="9 Corner" width="50%" />
+![9 Corner](routes/route-9-corner.jpeg)
 
 **Depth:** deep
 
 **Details:**
+- 5 yards, then deep towards the corner
 
+### 0 — Vertical
 
-### 10 — Vertical
-
-<img src="routes/route-10-vertical.jpeg" alt="10 Vertical" width="50%" />
+![0 Vertical](routes/route-0-vertical.jpeg)
 
 **Depth:** deep
 
 **Details:**
-
+- Deep route

@@ -8,11 +8,11 @@ Fill in this file with your team's position definitions. I'll use it to update t
 
 We teach in this order:
 
-1. **Routes** — Wide receivers learn the routes they will run (START HERE)
+1. **Routes** — Wide receivers learn the routes they will run (START HERE — see `routes.md`)
 2. **Formations** — Where everyone lines up (Spread, Trips Left, Trips Right)
 3. **Plays** — Route combinations called from each formation (coming later)
 
-Most girls will play **wide receiver** first. Focus on filling in the **Wide Receiver** sections and **Routes** below.
+Most girls will play **wide receiver** first. Focus on filling in the **Wide Receiver** sections below, and the full route tree in `routes.md`.
 
 ---
 
@@ -20,15 +20,15 @@ Most girls will play **wide receiver** first. Focus on filling in the **Wide Rec
 
 Use these IDs in formations (so everything links up):
 
-| ID   | Label             | Priority   |
-| ---- | ----------------- | ---------- |
-| `X`  | Wide Receiver (X) | **Learn first** |
-| `L`  | Wide Receiver (L) | **Learn first** |
-| `R`  | Wide Receiver (R) | **Learn first** |
-| `Z`  | Wide Receiver (Z) | **Learn first** |
-| `QB` | Quarterback       | Learn later |
-| `C`  | Center            | Learn later |
-| `H`  | Halfback          | Learn later |
+| ID   | Label                    | Priority   |
+| ---- | ------------------------ | ---------- |
+| `X`  | Outside Receiver (Left)  | **Learn first** |
+| `L`  | Slot Receiver (Left)     | **Learn first** |
+| `R`  | Slot Receiver (Right)    | **Learn first** |
+| `Z`  | Outside Receiver (Right) | **Learn first** |
+| `QB` | Quarterback              | Learn later |
+| `C`  | Center                   | Learn later |
+| `H`  | Halfback                 | Learn later |
 
 Add new IDs here if your team uses different names:
 
@@ -50,35 +50,7 @@ Add new IDs here if your team uses different names:
 
 See `formations.md` and `docs/formations/playbook-formations.png` for how the bunch shifts in Spread vs Trips Left vs Trips Right.
 
----
-
-## Routes reference
-
-List every route your team uses. Receivers need to know these cold.
-
-| Route name | Also called | Depth (short / medium / deep) | One-line description |
-| ---------- | ----------- | ----------------------------- | -------------------- |
-|            |             |                               |                      |
-|            |             |                               |                      |
-|            |             |                               |                      |
-
-**Route template (copy for each route):**
-
-```md
-### [Route Name]
-
-**Also called:**
-**Depth:** short / medium / deep
-
-**What it looks like:**
-[Describe the path — e.g. "3 steps up, sharp cut to the sideline"]
-
-**Coach B tip:**
-[What you tell the girls under the tree]
-
-**Common mistakes:**
-- [Mistake to avoid]
-```
+**Routes:** see `routes.md` for the full numbered route tree (Hitch through Vertical).
 
 ---
 
@@ -184,29 +156,9 @@ Sell the fake! If you're running a Go, look like you're going deep from the firs
 
 ---
 
-## Your routes
-
-<!-- Fill in every route your team uses -->
-
-### [Route Name]
-
-**Also called:**
-**Depth:**
-
-**What it looks like:**
-
-
-**Coach B tip:**
-
-
-**Common mistakes:**
--
-
----
-
 ## Your wide receivers
 
-<!-- START HERE — fill in routes first -->
+<!-- START HERE — fill in routes first (route definitions live in routes.md) -->
 
 ### Wide Receiver X — `X`
 

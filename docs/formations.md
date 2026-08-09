@@ -10,7 +10,7 @@ Fill in this file with your team's **three primary formations**. I'll use it to 
 
 We teach in this order:
 
-1. **Routes** — Wide receivers learn their routes first (see `positions.md`)
+1. **Routes** — Wide receivers learn their routes first (see `routes.md`)
 2. **Formations** — Where everyone lines up ← **this file**
 3. **Plays** — Putting routes together (coming later)
 

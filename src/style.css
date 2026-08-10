@@ -331,8 +331,9 @@ body {
 /* Learn */
 .learn-tabs {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 0.35rem;
-  overflow-x: auto;
   margin-bottom: 1rem;
   padding-bottom: 0.25rem;
 }

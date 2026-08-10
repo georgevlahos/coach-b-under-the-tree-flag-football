@@ -22,6 +22,8 @@ export function renderField(options = {}) {
     playId,
     interactive = false,
     className = '',
+    /** Crop top ~1/3 (end zone + unused field) — used on Learn formations/play calls */
+    compact = false,
   } = options
 
   let spots = {}
@@ -58,16 +60,25 @@ export function renderField(options = {}) {
     })
   }
 
+  // Full field: 100×100. Compact: ~6×4 feel — drop top third (end zone + deep field).
+  const viewBox = compact ? '0 34 100 66' : '0 0 100 100'
+  const fieldTop = compact ? 34 : 22
+
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-  svg.setAttribute('viewBox', '0 0 100 100')
-  svg.setAttribute('class', `field-svg ${className}`)
+  svg.setAttribute('viewBox', viewBox)
+  svg.setAttribute('class', `field-svg ${className}${compact ? ' field-svg--compact' : ''}`)
   svg.setAttribute('aria-label', 'Football field diagram')
 
-  svg.innerHTML = `
+  const endZone = compact
+    ? ''
+    : `
     <rect x="0" y="0" width="100" height="22" fill="#1b4332" opacity="0.35" rx="1"/>
-    <text x="50" y="12" text-anchor="middle" fill="#0d1167" font-size="4" opacity="0.55" font-weight="700">END ZONE</text>
-    <rect x="2" y="22" width="96" height="76" fill="#386641" rx="1"/>
-    ${yardLines()}
+    <text x="50" y="12" text-anchor="middle" fill="#0d1167" font-size="4" opacity="0.55" font-weight="700">END ZONE</text>`
+
+  svg.innerHTML = `
+    ${endZone}
+    <rect x="2" y="${fieldTop}" width="96" height="${98 - fieldTop}" fill="#386641" rx="1"/>
+    ${yardLines(fieldTop)}
     <line x1="2" y1="68" x2="98" y2="68" stroke="#eb6d20" stroke-width="0.6" stroke-dasharray="2,1"/>
     <text x="50" y="67" text-anchor="middle" fill="#ffedd5" font-size="2.5" opacity="0.9">LINE OF SCRIMMAGE</text>
     ${routePaths(routes)}
@@ -77,13 +88,15 @@ export function renderField(options = {}) {
   return svg
 }
 
-function yardLines() {
+/** @param {number} fieldTop */
+function yardLines(fieldTop = 22) {
   let lines = ''
-  for (let y = 30; y <= 90; y += 10) {
+  for (let y = Math.ceil(fieldTop / 10) * 10; y <= 90; y += 10) {
+    if (y <= fieldTop) continue
     lines += `<line x1="2" y1="${y}" x2="98" y2="${y}" stroke="#fff" stroke-width="0.15" opacity="0.25"/>`
   }
   for (const x of [25, 50, 75]) {
-    lines += `<line x1="${x}" y1="22" x2="${x}" y2="98" stroke="#fff" stroke-width="0.1" opacity="0.15"/>`
+    lines += `<line x1="${x}" y1="${fieldTop}" x2="${x}" y2="98" stroke="#fff" stroke-width="0.1" opacity="0.15"/>`
   }
   return lines
 }

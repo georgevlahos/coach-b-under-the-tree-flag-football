@@ -148,6 +148,22 @@ function answerChoicesFor(assignment, parsed) {
   return shuffle([correct, ...wrong])
 }
 
+function playCallExplanation(pos, play, assignment) {
+  const lineup = ['X', 'L', 'R', 'Z', 'H']
+    .map((id) => {
+      const a = play.parsed.assignments[id]
+      const mark = id === pos.id ? '✓ ' : ''
+      return `${mark}${id}: ${a?.label || '—'}`
+    })
+    .join(' · ')
+
+  return (
+    `For <strong>${pos.shortName}</strong> on "${play.call}": ` +
+    `<strong>${assignment.label}</strong>.` +
+    `<ul class="feedback-details"><li>${lineup}</li></ul>`
+  )
+}
+
 function generatePlayCallQuestions() {
   /** @type {QuizQuestion[]} */
   const qs = []
@@ -164,10 +180,14 @@ function generatePlayCallQuestions() {
         prompt: `What do you do on this play call?<br><span class="play-call-cue">"${play.call}"</span>`,
         options: answerChoicesFor(assignment, play.parsed),
         answer: assignment.label,
-        explanation: `For ${pos.shortName} on "${play.call}": <strong>${assignment.label}</strong>.`,
+        explanation: playCallExplanation(pos, play, assignment),
         audioPrompt: play.audioCall,
         visual: { mode: 'formation', formationId: play.formationId, highlightId: pos.id },
-        meta: { playId: play.id, positionId: pos.id },
+        meta: {
+          playId: play.id,
+          positionId: pos.id,
+          routeNumber: assignment.routeNumber,
+        },
       })
     }
   }

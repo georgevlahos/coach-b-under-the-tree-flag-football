@@ -97,11 +97,32 @@ export class QuizSession {
   }
 }
 
-/** @param {QuizQuestion} q @param {string | boolean} answer */
+/** Normalize dashes/spaces so "0 — Vertical" matches "0 - Vertical" etc. */
+function normalizeAnswer(value) {
+  return String(value)
+    .trim()
+    .replace(/[\u2010-\u2015\u2212]/g, '-')
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+}
+
+/** @param {QuizQuestion} q @param {string | boolean | number | null} answer */
 function checkAnswer(q, answer) {
+  if (answer == null) return false
   if (q.type === 'true-false') return answer === q.answer
-  if (Array.isArray(q.answer)) return q.answer.includes(answer)
-  return String(answer) === String(q.answer)
+  if (Array.isArray(q.answer)) {
+    return q.answer.some((a) => normalizeAnswer(a) === normalizeAnswer(answer))
+  }
+
+  if (normalizeAnswer(answer) === normalizeAnswer(q.answer)) return true
+
+  // Play-call route answers: accept bare number (e.g. "0") when it matches
+  const routeNumber = q.meta?.routeNumber
+  if (routeNumber != null && String(answer).trim() === String(routeNumber)) {
+    return true
+  }
+
+  return false
 }
 
 /** @param {number} streak */
@@ -190,7 +211,7 @@ export function renderQuiz(container, session, onComplete) {
 
   renderVisual(visualEl, q, session, (answer) => handleAnswer(answer))
   renderAnswers(answersEl, q, session)
-  bindAnswerButtons(answersEl, (answer) => handleAnswer(answer))
+  bindAnswerButtons(answersEl, q, (answer) => handleAnswer(answer))
 
   el.querySelector('#btn-replay-call')?.addEventListener('click', () => {
     replayQuestionAudio(q)
@@ -308,30 +329,47 @@ function renderAnswers(el, q, session) {
   if (q.type === 'true-false') {
     el.innerHTML = `
       <div class="answer-row tf-row">
-        ${renderBtn('True', true, session)}
-        ${renderBtn('False', false, session)}
+        ${renderBtn('True', { value: true }, session)}
+        ${renderBtn('False', { value: false }, session)}
       </div>`
     return
   }
 
   if (q.options) {
-    el.innerHTML = `<div class="answer-grid">${q.options.map((opt) => renderBtn(opt, opt, session)).join('')}</div>`
+    el.innerHTML = `<div class="answer-grid">${q.options
+      .map((opt, index) => renderBtn(opt, { index, value: opt }, session))
+      .join('')}</div>`
   }
 }
 
-function renderBtn(label, value, session) {
+/**
+ * @param {string} label
+ * @param {{ value: string | boolean, index?: number }} opts
+ * @param {QuizSession} session
+ */
+function renderBtn(label, opts, session) {
   const disabled = session.answered ? 'disabled' : ''
   let cls = 'btn btn-answer'
+  const value = opts.value
   if (session.answered) {
     const q = session.current
-    if (String(value) === String(q.answer)) cls += ' answer-correct'
-    else if (session.selectedAnswer != null && String(value) === String(session.selectedAnswer)) cls += ' answer-wrong'
+    if (normalizeAnswer(value) === normalizeAnswer(q.answer)) cls += ' answer-correct'
+    else if (
+      session.selectedAnswer != null &&
+      normalizeAnswer(value) === normalizeAnswer(session.selectedAnswer)
+    ) {
+      cls += ' answer-wrong'
+    }
   }
-  return `<button class="${cls}" data-value="${escapeAttr(String(value))}" ${disabled}>${label}</button>`
+  const indexAttr =
+    opts.index != null ? ` data-answer-index="${opts.index}"` : ''
+  const valueAttr =
+    opts.index == null ? ` data-value="${escapeAttr(String(value))}"` : ''
+  return `<button type="button" class="${cls}"${indexAttr}${valueAttr} ${disabled}>${label}</button>`
 }
 
 function escapeAttr(s) {
-  return s.replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
 function renderResults(container, session, onComplete) {
@@ -361,9 +399,15 @@ function renderResults(container, session, onComplete) {
   container.querySelector('#btn-home').addEventListener('click', () => onComplete('home'))
 }
 
-function bindAnswerButtons(answersEl, onAnswer) {
+/** @param {HTMLElement} answersEl @param {QuizQuestion} q @param {(answer: string | boolean) => void} onAnswer */
+function bindAnswerButtons(answersEl, q, onAnswer) {
   answersEl.querySelectorAll('.btn-answer:not([disabled])').forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (btn.dataset.answerIndex != null) {
+        const idx = Number(btn.dataset.answerIndex)
+        onAnswer(q.options[idx])
+        return
+      }
       const val = btn.dataset.value
       const parsed = val === 'true' ? true : val === 'false' ? false : val
       onAnswer(parsed)

@@ -26,7 +26,7 @@ let learnTab = 'routes'
 let activeSession = null
 let quizCategory = 'routes'
 let quizCueMode = 'both'
-let quizCount = 10
+let quizCount = 5
 /** @type {string} */
 let quizPosition = 'X'
 /** @type {import('./data/difficulty.js').DifficultyId} */
@@ -343,7 +343,7 @@ function bindEvents() {
   })
 
   app.querySelectorAll('.learn-field').forEach((el) => {
-    const opts = {}
+    const opts = { compact: true }
     if (el.dataset.formation) opts.formationId = el.dataset.formation
     if (el.dataset.route) opts.routeId = el.dataset.route
     el.appendChild(renderField(opts))

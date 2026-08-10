@@ -153,5 +153,5 @@ export function getRouteByNumber(n) {
 export function formatRoute(routeOrNumber) {
   const route = typeof routeOrNumber === 'object' ? routeOrNumber : getRouteByNumber(routeOrNumber)
   if (!route) return String(routeOrNumber)
-  return `${route.number} — ${route.name}`
+  return `${route.number} - ${route.name}`
 }

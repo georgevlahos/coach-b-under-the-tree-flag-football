@@ -141,7 +141,7 @@ function answerChoicesFor(assignment, parsed) {
   }
   pool.add('Reverse')
   pool.add('Fake Reverse')
-  pool.add('motion left + 3 — Arrow')
+  pool.add('motion left + 3 - Arrow')
   pool.add('fake run left')
 
   const wrong = shuffle([...pool].filter((x) => x !== correct)).slice(0, 3)

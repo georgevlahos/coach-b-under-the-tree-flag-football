@@ -97,7 +97,7 @@ export class QuizSession {
   }
 }
 
-/** Normalize dashes/spaces so "0 — Vertical" matches "0 - Vertical" etc. */
+/** Normalize dashes/spaces so route labels match across hyphen variants. */
 function normalizeAnswer(value) {
   return String(value)
     .trim()

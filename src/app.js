@@ -205,52 +205,54 @@ function renderQuizPage() {
 
   return `
     <section class="quiz-picker">
-      <h2>Pick a Quiz</h2>
-      <p class="quiz-picker-sub">How many questions?</p>
-      <div class="count-picker">
-        ${[5, 10, 15, 20].map((n) => `<button class="btn btn-count ${n === quizCount ? 'active' : ''}" data-count="${n}">${n}</button>`).join('')}
-      </div>
-      <div class="category-picker">
-        ${CATEGORIES.map((cat) => `
-          <button class="category-btn ${quizCategory === cat.id ? 'active' : ''}" data-cat="${cat.id}" style="--cat-color:${cat.color}">
-            <span>${cat.emoji}</span>
-            <span>${cat.label}</span>
-          </button>
-        `).join('')}
-      </div>
-      <div class="difficulty-picker-block">
-        <p class="quiz-picker-sub">Difficulty</p>
-        <div class="difficulty-picker">
-          ${DIFFICULTIES.map((d) => `
-            <button class="btn btn-difficulty ${quizDifficulty === d.id ? 'active' : ''}" data-difficulty="${d.id}" title="${d.blurb}">
-              <span class="diff-label">${d.label}</span>
-              <span class="diff-blurb">${d.blurb}</span>
+      <div class="quiz-picker-scroll">
+        <h2>Pick a Quiz</h2>
+        <p class="quiz-picker-sub">How many questions?</p>
+        <div class="count-picker">
+          ${[5, 10, 15, 20].map((n) => `<button class="btn btn-count ${n === quizCount ? 'active' : ''}" data-count="${n}">${n}</button>`).join('')}
+        </div>
+        <div class="category-picker">
+          ${CATEGORIES.map((cat) => `
+            <button class="category-btn ${quizCategory === cat.id ? 'active' : ''}" data-cat="${cat.id}" style="--cat-color:${cat.color}">
+              <span>${cat.emoji}</span>
+              <span>${cat.label}</span>
             </button>
           `).join('')}
         </div>
-        <p class="position-picker-hint">Current: <strong>${difficulty.label}</strong> — ${difficulty.blurb}</p>
-      </div>
-      ${playCallMode ? `
-        <div class="position-picker-block">
-          <p class="quiz-picker-sub">Test yourself as</p>
-          <div class="position-picker">
-            ${quizPositions.map((p) => `
-              <button class="btn btn-position ${quizPosition === p.id ? 'active' : ''}" data-position="${p.id}" title="${p.name}">
-                ${p.shortName}
+        <div class="difficulty-picker-block">
+          <p class="quiz-picker-sub">Difficulty</p>
+          <div class="difficulty-picker">
+            ${DIFFICULTIES.map((d) => `
+              <button class="btn btn-difficulty ${quizDifficulty === d.id ? 'active' : ''}" data-difficulty="${d.id}" title="${d.blurb}">
+                <span class="diff-label">${d.label}</span>
+                <span class="diff-blurb">${d.blurb}</span>
               </button>
             `).join('')}
           </div>
-          <p class="position-picker-hint">You'll stay as <strong>${quizPosition}</strong> for every question.</p>
+          <p class="position-picker-hint">Current: <strong>${difficulty.label}</strong> — ${difficulty.blurb}</p>
         </div>
-        <div class="cue-picker">
-          <p class="quiz-picker-sub">Play-call cues</p>
-          <div class="count-picker">
-            <button class="btn btn-count ${quizCueMode === 'both' ? 'active' : ''}" data-cue="both">Text + Audio</button>
-            <button class="btn btn-count ${quizCueMode === 'text' ? 'active' : ''}" data-cue="text">Text only</button>
-            <button class="btn btn-count ${quizCueMode === 'audio' ? 'active' : ''}" data-cue="audio">Audio focus</button>
+        ${playCallMode ? `
+          <div class="position-picker-block">
+            <p class="quiz-picker-sub">Test yourself as</p>
+            <div class="position-picker">
+              ${quizPositions.map((p) => `
+                <button class="btn btn-position ${quizPosition === p.id ? 'active' : ''}" data-position="${p.id}" title="${p.name}">
+                  ${p.shortName}
+                </button>
+              `).join('')}
+            </div>
+            <p class="position-picker-hint">You'll stay as <strong>${quizPosition}</strong> for every question.</p>
           </div>
-        </div>
-      ` : ''}
+          <div class="cue-picker">
+            <p class="quiz-picker-sub">Play-call cues</p>
+            <div class="count-picker">
+              <button class="btn btn-count ${quizCueMode === 'both' ? 'active' : ''}" data-cue="both">Text + Audio</button>
+              <button class="btn btn-count ${quizCueMode === 'text' ? 'active' : ''}" data-cue="text">Text only</button>
+              <button class="btn btn-count ${quizCueMode === 'audio' ? 'active' : ''}" data-cue="audio">Audio focus</button>
+            </div>
+          </div>
+        ` : ''}
+      </div>
       <button class="btn btn-primary btn-lg btn-start-quiz">Let's Go!</button>
     </section>
   `

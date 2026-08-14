@@ -249,7 +249,7 @@ body {
 /* Bottom nav — floating pill bar */
 .bottom-nav {
   position: fixed;
-  bottom: 0.85rem;
+  bottom: max(0.85rem, env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 1.5rem);
@@ -768,7 +768,7 @@ body:has(.quiz-fit) #app {
   transform: none;
   width: calc(100% - 1rem);
   max-width: none;
-  margin: 0.35rem auto 0.45rem;
+  margin: 0.35rem auto max(0.45rem, env(safe-area-inset-bottom, 0px));
   flex-shrink: 0;
   padding: 0.35rem;
 }
@@ -930,9 +930,22 @@ body:has(.quiz-fit) #app {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0;
+  justify-content: flex-start;
+  gap: 0.45rem;
+  padding: 0.15rem 0 0;
+}
+
+.quiz-fit .quiz-picker-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding-bottom: 0.25rem;
 }
 
 .quiz-fit .quiz-picker h2 {
@@ -959,8 +972,12 @@ body:has(.quiz-fit) #app {
 }
 
 .quiz-fit .btn-start-quiz {
-  margin-top: 0.5rem;
+  flex-shrink: 0;
+  margin-top: 0;
+  margin-bottom: 0.15rem;
   padding: 0.75rem 1rem;
+  position: relative;
+  z-index: 2;
 }
 
 .quiz-fit .quiz-results {

@@ -174,17 +174,28 @@ export function animateRunPlay(svg, play) {
   const spots = mapSpotsToYardField(formation ? { ...formation.spots } : {})
   const markerId = svg.dataset.markerId || `run-arrow-${play.id}`
 
-  // Paint order: slots under H, outside receivers (X/Z) always on top
+  // Paint order: slots under H, outside receivers (X/Z) always on top; reverse last so it reads clearly
   const runners = ['L', 'R', 'H', 'X', 'Z']
   const paths = []
   const defs = svg.querySelector('defs')
 
   for (const id of runners) {
     const assignment = play.parsed.assignments[id]
-    if (!assignment || assignment.kind !== 'route' || assignment.routeNumber == null) continue
-    const route = getRouteByNumber(assignment.routeNumber)
     const spot = spots[id]
-    if (!route || !spot) continue
+    if (!assignment || !spot) continue
+
+    let pathPts = null
+    let isReverse = false
+    let strokeWidth = '1.1'
+    if (assignment.kind === 'route' && assignment.routeNumber != null) {
+      const route = getRouteByNumber(assignment.routeNumber)
+      if (route) pathPts = buildAnimatedPath(spot, route)
+    } else if (assignment.kind === 'play' && assignment.playName === 'Reverse') {
+      pathPts = buildReversePath(id, spots)
+      isReverse = true
+      strokeWidth = '1.4'
+    }
+    if (!pathPts?.length) continue
 
     const color = POS_COLORS[id] || '#fdcb6e'
     const tipId = `${markerId}-${id}`
@@ -204,20 +215,44 @@ export function animateRunPlay(svg, play) {
       defs.appendChild(marker)
     }
 
-    const pathPts = buildAnimatedPath(spot, route)
-    const d = pathPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ')
+    const d = isReverse ? pointsToSmoothPath(pathPts) : pointsToLinePath(pathPts)
     const el = document.createElementNS('http://www.w3.org/2000/svg', 'path')
     el.setAttribute('d', d)
     el.setAttribute('fill', 'none')
     el.setAttribute('stroke', color)
-    el.setAttribute('stroke-width', '1.1')
+    el.setAttribute('stroke-width', strokeWidth)
     el.setAttribute('stroke-linecap', 'round')
     el.setAttribute('stroke-linejoin', 'round')
     el.setAttribute('marker-end', `url(#${tipId})`)
     el.classList.add('run-route-path')
     el.dataset.position = id
-    layer.appendChild(el)
-    paths.push(el)
+
+    if (isReverse) {
+      // Dotted run-play look; reveal via mask so draw-on still works
+      el.classList.add('run-route-path--reverse')
+      el.setAttribute('stroke-dasharray', '1.55 2.35')
+      el.style.opacity = '1'
+      const maskId = `${markerId}-reveal-${id}`
+      const mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask')
+      mask.setAttribute('id', maskId)
+      mask.setAttribute('maskUnits', 'userSpaceOnUse')
+      const reveal = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      reveal.setAttribute('d', d)
+      reveal.setAttribute('fill', 'none')
+      reveal.setAttribute('stroke', '#fff')
+      reveal.setAttribute('stroke-width', '2.8')
+      reveal.setAttribute('stroke-linecap', 'round')
+      reveal.setAttribute('stroke-linejoin', 'round')
+      reveal.classList.add('run-route-reveal')
+      mask.appendChild(reveal)
+      defs?.appendChild(mask)
+      el.setAttribute('mask', `url(#${maskId})`)
+      layer.appendChild(el)
+      paths.push(reveal)
+    } else {
+      layer.appendChild(el)
+      paths.push(el)
+    }
   }
 
   requestAnimationFrame(() => {
@@ -233,6 +268,107 @@ export function animateRunPlay(svg, play) {
       el.style.strokeDashoffset = '0'
     })
   })
+}
+
+/** @param {{ x: number, y: number }[]} pts */
+function pointsToLinePath(pts) {
+  return pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ')
+}
+
+/**
+ * Catmull-Rom → cubic Bezier for a smooth continuous curve through the points.
+ * @param {{ x: number, y: number }[]} pts
+ */
+function pointsToSmoothPath(pts) {
+  if (pts.length < 2) return pointsToLinePath(pts)
+  if (pts.length === 2) return pointsToLinePath(pts)
+
+  let d = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i]
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    const p3 = pts[i + 2] || p2
+    // Centripetal-ish tension
+    const c1x = p1.x + (p2.x - p0.x) / 6
+    const c1y = p1.y + (p2.y - p0.y) / 6
+    const c2x = p2.x - (p3.x - p1.x) / 6
+    const c2y = p2.y - (p3.y - p1.y) / 6
+    d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`
+  }
+  return d
+}
+
+/**
+ * Reverse: backward shallow J — drop straight back behind Q for the handoff,
+ * then a shallow curl across the opposite outside/slot gap and upfield.
+ * @param {string} runnerId
+ * @param {Record<string, { x: number, y: number }>} spots
+ */
+function buildReversePath(runnerId, spots) {
+  const start = spots[runnerId]
+  const q = spots.Q
+  if (!start || !q) return null
+
+  const fromRight = start.x >= 50
+  const gapOutside = fromRight ? spots.X : spots.Z
+  const gapSlot = fromRight ? spots.L : spots.R
+  const gapX =
+    gapOutside && gapSlot
+      ? (gapOutside.x + gapSlot.x) / 2
+      : fromRight
+        ? 21
+        : 79
+
+  const inward = fromRight ? -1 : 1
+  // Hook sits deeper than Q — the curved “bottom” of the backward J
+  const hookY = Math.min(FIELD_BOTTOM - 2, q.y + 5.5)
+  const handoffY = Math.min(FIELD_BOTTOM - 2.5, q.y + 2.8)
+
+  const pts = [
+    start,
+    // 1) Go backward first (little lateral) — start of the backward J
+    {
+      x: start.x + inward * 1.5,
+      y: start.y + (hookY - start.y) * 0.4,
+    },
+    // 2) Deepen the hook on the runner’s side of Q
+    {
+      x: q.x - inward * 7,
+      y: hookY,
+    },
+    // 3) Under / behind Q — handoff (tightest part of the J curve)
+    {
+      x: q.x + inward * 1,
+      y: handoffY,
+    },
+    // 4) Shallow exit across toward the opposite gap (still near backfield)
+    {
+      x: q.x + inward * 14,
+      y: handoffY - 2,
+    },
+    // 5) Between opposite outside + slot, just past LOS
+    {
+      x: gapX,
+      y: yardToY(LOS_FROM_BOTTOM + 2.5),
+    },
+    // 6) Stem upfield (keep it shallow — not a deep post)
+    {
+      x: gapX + inward * 1,
+      y: yardToY(LOS_FROM_BOTTOM + 12),
+    },
+  ]
+
+  return clampPointsToField(pts)
+}
+
+/** @param {{ x: number, y: number }[]} pts */
+function clampPointsToField(pts) {
+  const { left, right, top, bottom } = FIELD_BOUNDS
+  return pts.map((p) => ({
+    x: Math.min(right, Math.max(left, p.x)),
+    y: Math.min(bottom, Math.max(top, p.y)),
+  }))
 }
 
 /** Thin lines every 5 yards, thicker every 10; small yard numbers on the sidelines */

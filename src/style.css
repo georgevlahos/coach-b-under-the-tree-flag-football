@@ -1704,6 +1704,10 @@ body:has(.quiz-fit) #app {
   pointer-events: none;
 }
 
+.run-route-path--reverse {
+  opacity: 1;
+}
+
 .play-call-title {
   font-family: var(--font-display) !important;
   font-size: 1.12rem !important;

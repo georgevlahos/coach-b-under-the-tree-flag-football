@@ -58,7 +58,6 @@ function render() {
 }
 
 function renderHeader(compact = false) {
-  const progress = loadProgress()
   const audioOn = isAudioModeEnabled()
   return `
     <header class="site-header ${compact ? 'site-header--compact' : ''}">
@@ -70,8 +69,6 @@ function renderHeader(compact = false) {
         </div>
       </div>
       <div class="header-stats">
-        ${progress.streak > 0 ? `<span class="streak-badge">🔥 ${progress.streak}</span>` : ''}
-        <span class="score-badge">✅ ${progress.totalCorrect}</span>
         ${isSpeechSupported() ? `
           <button class="btn btn-icon ${audioOn ? 'active' : ''}" id="toggle-audio" title="Audio quiz mode">
             ${audioOn ? '🔊' : '🔇'}

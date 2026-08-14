@@ -230,14 +230,21 @@ export function renderQuiz(container, session, onComplete) {
     replayQuestionAudio(q)
   })
 
-  if (isAudioModeEnabled()) {
-    speakQuestion(q)
+  let cancelled = false
+  let timerStarted = false
+
+  const cancelQuestion = () => {
+    cancelled = true
+    clearTimers()
   }
 
-  if (limitSec && timerFill && timerLabel) {
+  const startQuestionTimer = () => {
+    if (cancelled || timerStarted || session.answered || !limitSec || !timerFill || !timerLabel) return
+    timerStarted = true
+
     const started = performance.now()
     const tick = (now) => {
-      if (session.answered) return
+      if (session.answered || cancelled) return
       const elapsed = (now - started) / 1000
       const left = Math.max(0, limitSec - elapsed)
       const pct = (left / limitSec) * 100
@@ -253,9 +260,25 @@ export function renderQuiz(container, session, onComplete) {
     timerId = setTimeout(() => handleAnswer(null, true), limitSec * 1000 + 30)
   }
 
+  // Hold at full time until the clock actually starts
+  if (limitSec && timerFill && timerLabel) {
+    timerFill.style.width = '100%'
+    timerLabel.textContent = `${limitSec}s`
+  }
+
+  if (isAudioModeEnabled()) {
+    // Don't start the clock until the spoken prompt/call finishes
+    Promise.resolve(speakQuestion(q)).finally(() => {
+      if (cancelled || session.answered) return
+      startQuestionTimer()
+    })
+  } else {
+    startQuestionTimer()
+  }
+
   function handleAnswer(answer, fromTimeout = false) {
     if (session.answered) return
-    clearTimers()
+    cancelQuestion()
 
     const result = fromTimeout ? session.submitTimeout() : session.submit(answer)
     if (!result) return
@@ -292,7 +315,7 @@ export function renderQuiz(container, session, onComplete) {
       </button>
     `
     actionsEl.querySelector('#btn-next').addEventListener('click', () => {
-      clearTimers()
+      cancelQuestion()
       session.next()
       renderQuiz(container, session, onComplete)
     })
@@ -424,7 +447,16 @@ function renderResults(container, session, onComplete) {
 
 /** @param {HTMLElement} answersEl @param {QuizQuestion} q @param {(answer: string | boolean) => void} onAnswer */
 function bindAnswerButtons(answersEl, q, onAnswer) {
+  // Clear any sticky hover/focus from the previous question (common on iOS Safari)
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur()
+  }
+
   answersEl.querySelectorAll('.btn-answer:not([disabled])').forEach((btn) => {
+    btn.addEventListener('pointerup', () => {
+      // Drop focus so iOS doesn't leave a sticky highlight
+      requestAnimationFrame(() => btn.blur())
+    })
     btn.addEventListener('click', () => {
       if (btn.dataset.answerIndex != null) {
         const idx = Number(btn.dataset.answerIndex)

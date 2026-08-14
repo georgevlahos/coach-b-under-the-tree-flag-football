@@ -228,12 +228,19 @@ body {
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-sm);
   font-weight: 600;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
-.btn-answer:hover:not(:disabled) {
-  border-color: rgba(235, 109, 32, 0.55);
-  background: rgba(235, 109, 32, 0.06);
-  box-shadow: var(--shadow);
+/* No hover/focus chrome — sticky :hover on iOS looks like a pre-selected answer */
+.btn-answer:hover:not(:disabled),
+.btn-answer:focus,
+.btn-answer:focus-visible {
+  outline: none;
+  border-color: rgba(13, 17, 103, 0.1);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  transform: none;
 }
 
 .btn-answer.answer-correct {
@@ -242,6 +249,20 @@ body {
 }
 
 .btn-answer.answer-wrong {
+  border-color: var(--danger);
+  background: rgba(193, 18, 31, 0.08);
+}
+
+.btn-answer.answer-correct:hover:not(:disabled),
+.btn-answer.answer-correct:focus,
+.btn-answer.answer-correct:focus-visible {
+  border-color: var(--success);
+  background: rgba(42, 157, 143, 0.12);
+}
+
+.btn-answer.answer-wrong:hover:not(:disabled),
+.btn-answer.answer-wrong:focus,
+.btn-answer.answer-wrong:focus-visible {
   border-color: var(--danger);
   background: rgba(193, 18, 31, 0.08);
 }

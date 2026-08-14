@@ -1,4 +1,4 @@
-import { positions, getQuizPositions, getPositionById } from './data/positions.js'
+import { getQuizPositions, getPositionById } from './data/positions.js'
 import { formations } from './data/formations.js'
 import { routes, formatRoute } from './data/routes.js'
 import { plays } from './data/plays.js'
@@ -13,6 +13,11 @@ import { loadProgress, BADGE_INFO, resetProgress } from './quiz/progress.js'
 import { QuizSession, renderQuiz } from './quiz/engine.js'
 import { renderField, injectFieldDefs } from './visual/field.js'
 import {
+  getRunnablePlays,
+  mountRunPlayField,
+  animateRunPlay,
+} from './visual/runPlay.js'
+import {
   isSpeechSupported,
   isAudioModeEnabled,
   setAudioMode,
@@ -24,6 +29,8 @@ let currentPage = 'home'
 let learnTab = 'routes'
 /** @type {QuizSession | null} */
 let activeSession = null
+/** Show "You are the …" splash before play-call quiz questions */
+let showYouAreIntro = false
 let quizCategory = 'routes'
 let quizCueMode = 'both'
 let quizCount = 5
@@ -106,16 +113,14 @@ function renderPage() {
 function renderHome() {
   return `
     <section class="hero">
-      <p class="hero-kicker">Lake Zurich Flames · Girls Flag Football</p>
-      <h2 class="hero-brand">Coach B</h2>
       <p class="hero-text">
         Learn your routes and what to run when Coach calls a play.
       </p>
       <div class="hero-actions">
-        <button class="btn btn-primary btn-lg" data-quiz-cat="routes">Test Me on Routes</button>
+        <button class="btn btn-primary btn-lg" data-action="go-learn">Learn about our Routes and Plays</button>
+        <button class="btn btn-secondary btn-lg" data-quiz-cat="routes">Test Me on Routes</button>
         <button class="btn btn-secondary btn-lg" data-quiz-cat="play-calls">Test Me on Play Calls</button>
       </div>
-      <button class="btn btn-text" data-action="go-learn">Study first →</button>
     </section>
     <section class="feature-banner">
       <p>🔊 Toggle the speaker for audio play-call practice. You can also quiz with text-only cues.</p>
@@ -128,9 +133,9 @@ function renderLearn() {
     { id: 'routes', label: 'Routes' },
     { id: 'formations', label: 'Formations' },
     { id: 'plays', label: 'Play calls' },
-    { id: 'positions', label: 'Positions' },
   ]
-  const quizCat = learnTab === 'plays' ? 'play-calls' : learnTab === 'positions' ? 'routes' : learnTab
+  if (learnTab === 'positions') learnTab = 'routes'
+  const quizCat = learnTab === 'plays' ? 'play-calls' : learnTab
   const quizLabel = learnTab === 'plays' ? 'play calls' : learnTab
   return `
     <section class="learn-page">
@@ -147,19 +152,6 @@ function renderLearn() {
 
 function renderLearnTab() {
   switch (learnTab) {
-    case 'positions':
-      return positions.map((p) => `
-        <article class="learn-card">
-          <div class="learn-card-header">
-            <span class="learn-emoji">${p.emoji}</span>
-            <h3>${p.shortName} — ${p.name}</h3>
-          </div>
-          <p>${p.description}</p>
-          <p class="learn-job"><strong>Job:</strong> ${p.job}</p>
-          <p class="learn-tip">💡 ${p.tip}</p>
-          ${p.quizEligible ? '' : '<p class="learn-muted">Not quizzed on play calls yet.</p>'}
-        </article>
-      `).join('')
     case 'formations':
       return formations.map((f) => `
         <article class="learn-card">
@@ -181,17 +173,20 @@ function renderLearnTab() {
         </article>
       `).join('')
     case 'plays':
-      return plays.map((play) => `
-        <article class="learn-card">
+      return getRunnablePlays(plays).map((play) => `
+        <article class="learn-card learn-card--play" data-play-card="${play.id}">
           <h3 class="play-call-title">${play.call}</h3>
-          <div class="learn-field" data-formation="${play.formationId}"></div>
+          <div class="learn-field learn-field--run" data-run-play="${play.id}"></div>
           <ul class="assignment-list">
             ${['X', 'L', 'R', 'Z', 'H'].map((id) => {
               const a = play.parsed.assignments[id]
               return `<li><strong>${id}:</strong> ${a?.label || '—'}</li>`
             }).join('')}
           </ul>
-          <button class="btn btn-sm btn-secondary" data-hear-play="${play.id}">Hear the call</button>
+          <div class="play-card-actions">
+            <button class="btn btn-sm btn-secondary" data-hear-play="${play.id}">Hear the call</button>
+            <button class="btn btn-sm btn-primary" data-run-play-btn="${play.id}">Run the Play</button>
+          </div>
         </article>
       `).join('')
     default:
@@ -343,6 +338,11 @@ function bindEvents() {
   })
 
   app.querySelectorAll('.learn-field').forEach((el) => {
+    if (el.dataset.runPlay) {
+      const play = plays.find((p) => p.id === el.dataset.runPlay)
+      if (play) mountRunPlayField(el, play)
+      return
+    }
     const opts = { compact: true }
     if (el.dataset.formation) opts.formationId = el.dataset.formation
     if (el.dataset.route) opts.routeId = el.dataset.route
@@ -359,6 +359,17 @@ function bindEvents() {
           if (!wasOn) setAudioMode(false)
         })
       }
+    })
+  })
+
+  app.querySelectorAll('[data-run-play-btn]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const playId = btn.dataset.runPlayBtn
+      const play = plays.find((p) => p.id === playId)
+      const field = app.querySelector(`.learn-field[data-run-play="${playId}"]`)
+      const svg = field?.querySelector('svg')
+      if (!play || !svg) return
+      animateRunPlay(svg, play)
     })
   })
 
@@ -423,16 +434,45 @@ function bindEvents() {
       } else {
         app.classList.remove('cue-audio-focus')
       }
-      renderQuiz(container, activeSession, (action) => {
-        if (action === 'retry') startQuiz(quizCategory, activeSession.questions.length)
-        else {
-          activeSession = null
-          currentPage = 'quiz'
-          render()
-        }
-      })
+
+      if (showYouAreIntro && activeSession.category === 'play-calls') {
+        renderYouAreIntro(container, activeSession.positionId)
+      } else {
+        renderQuiz(container, activeSession, (action) => {
+          if (action === 'retry') startQuiz(quizCategory, activeSession.questions.length)
+          else {
+            activeSession = null
+            showYouAreIntro = false
+            currentPage = 'quiz'
+            render()
+          }
+        })
+      }
     }
   }
+}
+
+/**
+ * @param {HTMLElement} container
+ * @param {string | null | undefined} positionId
+ */
+function renderYouAreIntro(container, positionId) {
+  const pos = positionId ? getPositionById(positionId) : null
+  const { letter, role } = formatYouAreParts(pos)
+  container.innerHTML = `
+    <div class="you-are-overlay" role="dialog" aria-modal="true" aria-labelledby="you-are-heading">
+      <div class="you-are-card">
+        <p class="you-are-text" id="you-are-heading">
+          You are the <span class="you-are-letter">${letter}</span> ${role}!
+        </p>
+        <button type="button" class="btn btn-primary btn-lg" id="you-are-continue">Let's play!</button>
+      </div>
+    </div>
+  `
+  container.querySelector('#you-are-continue')?.addEventListener('click', () => {
+    showYouAreIntro = false
+    render()
+  })
 }
 
 function startQuiz(category, count) {
@@ -444,12 +484,26 @@ function startQuiz(category, count) {
     positionLabel: pos ? formatQuizPositionLabel(pos) : null,
     difficultyId: quizDifficulty,
   })
+  showYouAreIntro = category === 'play-calls'
   currentPage = 'quiz'
   render()
 }
 
+/** @param {{ id: string, shortName: string } | null | undefined} pos */
+function formatYouAreParts(pos) {
+  if (!pos) return { letter: '?', role: 'Player' }
+  const roles = {
+    X: 'Outside Receiver',
+    Z: 'Outside Receiver',
+    L: 'Slot Receiver',
+    R: 'Slot Receiver',
+    H: 'Halfback',
+  }
+  return { letter: pos.shortName, role: roles[pos.id] || pos.name }
+}
+
 /** @param {{ id: string, shortName: string }} pos */
 function formatQuizPositionLabel(pos) {
-  if (pos.id === 'H') return `${pos.shortName} Halfback`
-  return `${pos.shortName} Receiver`
+  const { letter, role } = formatYouAreParts(pos)
+  return `${letter} ${role}`
 }

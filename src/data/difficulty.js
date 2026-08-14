@@ -19,14 +19,14 @@ export const DIFFICULTIES = [
   {
     id: 'veteran',
     label: 'Veteran',
-    seconds: 7,
-    blurb: '7 seconds per question',
+    seconds: 8,
+    blurb: '8 seconds per question',
   },
   {
     id: 'allpro',
     label: 'All-Pro',
-    seconds: 4,
-    blurb: '4 seconds per question',
+    seconds: 5,
+    blurb: '5 seconds per question',
   },
 ]
 

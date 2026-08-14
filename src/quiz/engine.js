@@ -1,5 +1,6 @@
 import { recordAnswer } from './progress.js'
 import { renderField, bindFieldInteraction, injectFieldDefs } from '../visual/field.js'
+import { mountYardFormationField } from '../visual/runPlay.js'
 import {
   speakQuestion,
   speakFeedback,
@@ -160,11 +161,20 @@ export function renderQuiz(container, session, onComplete) {
   const difficulty = session.difficulty
   const limitSec = difficulty.seconds
   const isPlayCall = session.category === 'play-calls' || q.category === 'play-calls'
+  const isFormation = session.category === 'formations' || q.category === 'formations'
 
   const el = document.createElement('div')
-  el.className = 'quiz-card quiz-card--fit'
+  el.className = `quiz-card quiz-card--fit${isPlayCall ? ' quiz-card--play-calls' : ''}${isFormation ? ' quiz-card--formations' : ''}`
+  const positionChip = session.positionId
+    ? `
+      <div class="quiz-position-chip" aria-live="polite" title="${session.positionLabel || session.positionId}">
+        <span class="quiz-position-label">Your position</span>
+        <span class="quiz-position-id">${session.positionId}</span>
+      </div>`
+    : ''
+
   el.innerHTML = `
-    ${session.positionLabel ? `
+    ${!isPlayCall && session.positionLabel ? `
       <div class="quiz-position-banner" aria-live="polite">
         <span class="quiz-position-label">Your position</span>
         <span class="quiz-position-id">${session.positionLabel}</span>
@@ -184,8 +194,11 @@ export function renderQuiz(container, session, onComplete) {
         </div>` : ''}
     </div>
     <div class="quiz-body">
-      <div class="quiz-prompt-area">
-        <div class="quiz-prompt">${q.prompt}</div>
+      <div class="quiz-prompt-area${isPlayCall ? ' quiz-prompt-area--play' : ''}">
+        <div class="quiz-prompt-row">
+          <div class="quiz-prompt">${q.prompt}</div>
+          ${isPlayCall ? positionChip : ''}
+        </div>
         ${q.hint && !session.answered ? `<p class="quiz-hint">💡 ${q.hint}</p>` : ''}
         ${isPlayCall ? `
           <button type="button" class="btn btn-sm btn-replay" id="btn-replay-call">
@@ -295,6 +308,16 @@ function renderVisual(el, q, session, onAnswer) {
     if (route?.image) {
       el.innerHTML = `<img class="route-quiz-image" src="${route.image}" alt="Route diagram" />`
     }
+    return
+  }
+
+  // Play-call / formation quiz: same 35-yard field as Learn → Play Calls
+  if ((q.category === 'play-calls' || q.category === 'formations') && q.visual.formationId) {
+    mountYardFormationField(el, {
+      formationId: q.visual.formationId,
+      highlightId: session.positionId || q.visual.highlightId,
+      className: 'quiz-field field-svg--quiz-yard',
+    })
     return
   }
 

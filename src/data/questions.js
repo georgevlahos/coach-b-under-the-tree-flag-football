@@ -20,7 +20,7 @@ import { getQuizPositions } from './positions.js'
 export const CATEGORIES = [
   { id: 'routes', label: 'Test Me on Routes', emoji: '🏃', color: '#eb6d20' },
   { id: 'play-calls', label: 'Test Me on Play Calls', emoji: '📢', color: '#0d1167' },
-  { id: 'formations', label: 'Formations (light)', emoji: '📐', color: '#3d5a80' },
+  { id: 'formations', label: 'Formations', emoji: '📐', color: '#3d5a80' },
 ]
 
 /** @param {import('./routes.js').Route} route @param {string} [headline] */

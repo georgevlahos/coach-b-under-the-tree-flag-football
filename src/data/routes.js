@@ -3,6 +3,8 @@
  * @property {number} number
  * @property {string} name
  * @property {string} depth - short | medium | deep
+ * @property {number} [depthYards] - override stem depth in yards
+ * @property {number} [lateralYards] - override break distance in yards
  * @property {string} description
  * @property {string} image - public path to diagram
  * @property {Array<{ x: number, y: number }>} path
@@ -52,9 +54,12 @@ export const routes = [
     id: '4',
     number: 4,
     name: 'In',
-    depth: 'medium',
-    description: '5 yards up, then break toward the middle.',
+    depth: 'short',
+    depthYards: 5.5,
+    lateralYards: 7,
+    description: 'About 5–6 yards up, then break toward the middle.',
     image: '/routes/route-4-in.jpeg',
+    // Sharp right-angle: stem up, then in (mirrored L/R; clipped so sides never meet)
     path: [
       { x: 50, y: 68 },
       { x: 50, y: 55 },
@@ -79,12 +84,18 @@ export const routes = [
     number: 6,
     name: 'Curl',
     depth: 'medium',
-    description: '10 yards up, then turn back toward the QB.',
+    description: '10 yards up, then curl back toward the QB.',
     image: '/routes/route-6-curl.jpeg',
+    // Stem upfield, then inward hook that turns back toward the QB (mirrored L/R)
     path: [
       { x: 50, y: 68 },
-      { x: 50, y: 48 },
-      { x: 50, y: 52 },
+      { x: 50, y: 54 },
+      { x: 50, y: 42 },
+      { x: 50, y: 36 },
+      { x: 54, y: 33 },
+      { x: 60, y: 34 },
+      { x: 63, y: 39 },
+      { x: 61, y: 46 },
     ],
   },
   {

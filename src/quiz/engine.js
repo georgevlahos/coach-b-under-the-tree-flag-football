@@ -337,7 +337,7 @@ function renderVisual(el, q, session, onAnswer) {
     return
   }
 
-  // Play-call / formation quiz: same 35-yard field as Learn → Play Calls
+  // Play-call / formation quiz: same 30-yard field as Learn → Play Calls
   if ((q.category === 'play-calls' || q.category === 'formations') && q.visual.formationId) {
     mountYardFormationField(el, {
       formationId: q.visual.formationId,

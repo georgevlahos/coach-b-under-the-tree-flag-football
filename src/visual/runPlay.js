@@ -12,8 +12,8 @@ const POS_COLORS = {
   Q: '#0d1167',
 }
 
-/** Practice field: ~35 yards long, LOS 10 yards from the bottom */
-const FIELD_YARDS = 35
+/** Practice field: 30 yards long — 10 behind LOS, 20 ahead */
+const FIELD_YARDS = 30
 const LOS_FROM_BOTTOM = 10
 const FIELD_LEFT = 4
 const FIELD_RIGHT = 96
@@ -39,9 +39,9 @@ const FIELD_BOUNDS = {
 }
 
 const TOWARD_SIDELINE = new Set(['Arrow', 'Out', 'Wheel', 'Corner'])
-const TOWARD_MIDDLE = new Set(['Slant', 'In', 'Post'])
+const TOWARD_MIDDLE = new Set(['Slant', 'In', 'Post', 'Curl'])
 
-/** Yards from bottom of field → SVG y (0 = bottom, 35 = top) */
+/** Yards from bottom of field → SVG y (0 = bottom, 30 = top) */
 function yardToY(yardsFromBottom) {
   return FIELD_BOTTOM - yardsFromBottom * YARD
 }
@@ -56,7 +56,7 @@ export function getRunnablePlays(allPlays) {
 }
 
 /**
- * Map formation spots onto the 35-yard field (LOS at 10 yards from bottom).
+ * Map formation spots onto the 30-yard field (LOS at 10 yards from bottom).
  * @param {Record<string, { x: number, y: number }>} spots
  */
 function mapSpotsToYardField(spots) {
@@ -73,7 +73,7 @@ function mapSpotsToYardField(spots) {
 }
 
 /**
- * Build the shared 35-yard field SVG (Learn Run the Play + quizzes + route diagrams).
+ * Build the shared 30-yard field SVG (Learn Run the Play + quizzes + route diagrams).
  * @param {{
  *   formationId?: string,
  *   highlightId?: string,
@@ -134,7 +134,7 @@ export function createYardFieldSvg(opts) {
 }
 
 /**
- * Mount the 35-yard field into a container (play-call quiz / shared use).
+ * Mount the 30-yard field into a container (play-call quiz / shared use).
  * @param {HTMLElement} container
  * @param {{ formationId: string, highlightId?: string, className?: string }} opts
  */
@@ -152,7 +152,7 @@ export function mountYardFormationField(container, opts) {
 }
 
 /**
- * Mount a 35-yard formation field for route animation (players stay put).
+ * Mount a 30-yard formation field for route animation (players stay put).
  * @param {HTMLElement} container
  * @param {import('../data/plays.js').Play} play
  */
@@ -171,7 +171,7 @@ export function mountRunPlayField(container, play) {
 
 /**
  * Learn / quiz route diagram: unlabeled receiver circle(s) + route path(s)
- * on the shared 35-yard field. Vertical uses one circle; other routes show
+ * on the shared 30-yard field. Vertical uses one circle; other routes show
  * left and right so both breaks are clear.
  * @param {HTMLElement} container
  * @param {import('../data/routes.js').Route} route
@@ -242,7 +242,11 @@ function paintLearnRoutePaths(svg, route, spots, opts = {}) {
     }
 
     const pathPts = buildAnimatedPath(spot, route)
-    const d = pathPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ')
+    // Sharp breaks (In/Out/etc.) stay angular; Curl/Wheel keep a smooth stroke
+    const d =
+      route.name === 'Curl' || route.name === 'Wheel'
+        ? pointsToSmoothPath(pathPts)
+        : pointsToLinePath(pathPts)
     const el = document.createElementNS('http://www.w3.org/2000/svg', 'path')
     el.setAttribute('d', d)
     el.setAttribute('fill', 'none')
@@ -510,7 +514,7 @@ function yardGrid() {
       stroke="#fff" stroke-width="0.1" opacity="0.12"/>`
   }
 
-  // Small yard markers (yards from bottom of this 35-yard field)
+  // Small yard markers (yards from bottom of this 30-yard field)
   for (let yd = 5; yd <= FIELD_YARDS - 5; yd += 5) {
     const y = yardToY(yd)
     const label = String(yd)
@@ -533,8 +537,11 @@ function buildAnimatedPath(spot, route) {
     dy: p.y - origin.y,
   }))
 
-  rel = scaleToDepth(rel, route.depth)
+  rel = scaleToDepth(rel, route)
   rel = orientLaterals(rel, spot, route)
+  if (TOWARD_MIDDLE.has(route.name)) {
+    rel = clampTowardMiddle(rel, spot)
+  }
   rel = fitRelInsideField(spot, rel)
 
   return rel.map((p) => ({
@@ -543,9 +550,19 @@ function buildAnimatedPath(spot, route) {
   }))
 }
 
-/** @param {{ dx: number, dy: number }[]} rel @param {string} depth */
-function scaleToDepth(rel, depth) {
-  const targetUp = (DEPTH_YARDS[depth] || DEPTH_YARDS.medium) * YARD
+/**
+ * Scale stem depth (and optional lateral break) into yard units on the field.
+ * @param {{ dx: number, dy: number }[]} rel
+ * @param {import('../data/routes.js').Route | string} routeOrDepth
+ */
+function scaleToDepth(rel, routeOrDepth) {
+  const route = typeof routeOrDepth === 'object' ? routeOrDepth : null
+  const depthKey = route ? route.depth : routeOrDepth
+  const depthYards =
+    route?.depthYards != null
+      ? route.depthYards
+      : DEPTH_YARDS[depthKey] || DEPTH_YARDS.medium
+  const targetUp = depthYards * YARD
   const maxUp = Math.max(...rel.map((p) => -p.dy), 0)
   const maxLat = Math.max(...rel.map((p) => Math.abs(p.dx)), 0)
 
@@ -555,8 +572,13 @@ function scaleToDepth(rel, depth) {
     return rel.map((p) => ({ dx: p.dx * scale, dy: p.dy * scale }))
   }
 
-  const scale = maxUp > 0.5 ? targetUp / maxUp : 1
-  return rel.map((p) => ({ dx: p.dx * scale, dy: p.dy * scale }))
+  const scaleY = maxUp > 0.5 ? targetUp / maxUp : 1
+  if (route?.lateralYards != null && maxLat > 0.5) {
+    const scaleX = (route.lateralYards * YARD) / maxLat
+    return rel.map((p) => ({ dx: p.dx * scaleX, dy: p.dy * scaleY }))
+  }
+
+  return rel.map((p) => ({ dx: p.dx * scaleY, dy: p.dy * scaleY }))
 }
 
 function orientLaterals(rel, spot, route) {
@@ -580,6 +602,23 @@ function orientLaterals(rel, spot, route) {
   }
 
   return rel
+}
+
+/** Keep “In” / toward-middle breaks from crossing midfield (and each other). */
+function clampTowardMiddle(rel, spot) {
+  const gap = 3.5
+  if (spot.x < 50) {
+    const maxDx = 50 - gap - spot.x
+    return rel.map((p) => ({
+      dx: Math.min(p.dx, Math.max(0, maxDx)),
+      dy: p.dy,
+    }))
+  }
+  const minDx = 50 + gap - spot.x
+  return rel.map((p) => ({
+    dx: Math.max(p.dx, Math.min(0, minDx)),
+    dy: p.dy,
+  }))
 }
 
 function fitRelInsideField(spot, rel) {
@@ -619,9 +658,11 @@ function playerMarkers(spots, highlightId = null, opts = {}) {
       const label = unlabeled ? '' : pos?.shortName || id
       const color = unlabeled ? '#eb6d20' : POS_COLORS[id] || '#dfe6e9'
       const isHighlight = highlightId && id === highlightId
-      const r = unlabeled ? 2.85 : isHighlight ? 3.35 : 2.6
-      const stroke = isHighlight ? '#fff' : 'rgba(255,255,255,0.5)'
-      const sw = isHighlight ? 0.7 : 0.3
+      // Learn/Routes: hollow start circles ~30% smaller than filled markers
+      const r = unlabeled ? 2.0 : isHighlight ? 3.35 : 2.6
+      const fill = unlabeled ? 'none' : color
+      const stroke = unlabeled ? '#eb6d20' : isHighlight ? '#fff' : 'rgba(255,255,255,0.5)'
+      const sw = unlabeled ? 0.55 : isHighlight ? 0.7 : 0.3
       const fontSize = isHighlight ? 2.35 : 2.1
       const fontWeight = isHighlight ? '800' : 'bold'
       const cls = isHighlight
@@ -633,7 +674,7 @@ function playerMarkers(spots, highlightId = null, opts = {}) {
         : ''
       return `
         <g class="${cls}" data-position="${id}">
-          <circle cx="${spot.x}" cy="${spot.y}" r="${r}" fill="${color}"
+          <circle cx="${spot.x}" cy="${spot.y}" r="${r}" fill="${fill}"
             stroke="${stroke}" stroke-width="${sw}"/>
           ${text}
         </g>`

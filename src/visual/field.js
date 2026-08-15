@@ -79,7 +79,7 @@ export function renderField(options = {}) {
     ${endZone}
     <rect x="2" y="${fieldTop}" width="96" height="${98 - fieldTop}" fill="#386641" rx="1"/>
     ${yardLines(fieldTop)}
-    <line x1="2" y1="68" x2="98" y2="68" stroke="#eb6d20" stroke-width="0.6" stroke-dasharray="2,1"/>
+    <line x1="2" y1="68" x2="98" y2="68" stroke="#f0ebe3" stroke-width="0.42" stroke-dasharray="2,1"/>
     ${routePaths(routes)}
     ${playerMarkers(spots, highlightId, interactive)}
   `

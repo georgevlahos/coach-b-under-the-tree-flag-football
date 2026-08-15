@@ -1,13 +1,16 @@
-/** Web Speech API wrapper — friendly Coach B voice */
+/** Web Speech API wrapper — warm Coach B voice (US English) */
 
 let enabled = false
 /** @type {SpeechSynthesisVoice | null} */
 let preferredVoice = null
 
 const DEFAULT_RATE = 0.78
-const PLAY_CALL_RATE = 0.72
+/** Slightly slower — calm sideline cadence for play calls */
+const PLAY_CALL_RATE = 0.68
 const FEEDBACK_RATE = 0.82
-const DEFAULT_PITCH = 1.1
+const DEFAULT_PITCH = 1.05
+/** A touch lower reads warmer / less “chipper” on play calls */
+const PLAY_CALL_PITCH = 0.98
 
 export function isSpeechSupported() {
   return 'speechSynthesis' in window
@@ -26,22 +29,50 @@ export function setAudioMode(on) {
   return enabled
 }
 
-/** Prefer warm, natural English voices over robotic defaults */
+/**
+ * Prefer a warm US-English male coach voice.
+ * Note: browsers don’t expose a real “Chicago accent” voice — we pick the
+ * warmest available American English male option on the device.
+ */
 function scoreVoice(voice) {
   const name = voice.name || ''
   const lang = voice.lang || ''
   if (!/^en([-_]|$)/i.test(lang)) return -100
+
   // Skip novelty / robotic Mac voices
   if (/compact|eloquence|novelty|whisper|zarvox|trinoids|bad news|good news|boing|bubbles|cellos|albert|bahh|bells|boiler|fred|junior|pipe organ|princess|ralph|superstar|deranged|hysterical|jester|organ|sinbad|whisper/i.test(name)) {
     return -50
   }
 
+  // Prefer American English; down-rank UK / AU / IN for play-call feel
+  if (/en-GB|en_GB|en-AU|en_AU|en-IN|en_IN|en-IE|en_IE|en-ZA|en_ZA/i.test(lang) || /british|australian|irish|indian|uk english|english united kingdom/i.test(name)) {
+    return -20
+  }
+
   let score = 10
-  if (/samantha|karen|moira|fiona|tessa|victoria|karen|ava|allison|susan|zoe|aria|jenny|sara|natasha|google uk english female|google us english/i.test(name)) score += 40
-  if (/natural|premium|enhanced|neural|wavenet|studio/i.test(name)) score += 25
-  if (/female|woman/i.test(name)) score += 8
+
+  // Warm US male voices commonly available on Apple / Google / Microsoft
+  if (/aaron|alex|tom|nathan|evan|matthew|guy|davis|tony|justin|joey|noah|arthur|daniel|david|james|john|mark|ralph|bruce|gordon|lee|rocko|reed|eddy|flo|sandy|grandpa/i.test(name) && !/female|woman/i.test(name)) {
+    score += 55
+  }
+  // Known warm US female voices — keep as fallback, but below male coach picks
+  if (/samantha|nicky|ava|allison|susan|zoe|kathy|stephanie|joanna|salli|kimberly|kendra|ivy|jenny|aria|sara|michelle|grandma/i.test(name)) {
+    score += 25
+  }
+  // Enhanced / natural engines sound much warmer than compact system voices
+  if (/natural|premium|enhanced|neural|wavenet|studio|siri|super|quality/i.test(name)) {
+    score += 30
+  }
+  if (/en-US|en_US|english \(us\)|english united states|american/i.test(`${lang} ${name}`)) {
+    score += 20
+  }
+  // Prefer male for Coach B / Hear the Call
+  if (/male|man|\(male\)|aaron|alex|tom|nathan|evan|matthew|guy|davis|tony|justin|joey|noah|bruce|gordon|lee|rocko|reed|eddy/i.test(name) && !/female|woman/i.test(name)) {
+    score += 35
+  }
+  if (/female|woman|\(female\)/i.test(name)) score -= 15
   if (voice.localService) score += 5
-  if (/en-US|en_US/i.test(lang)) score += 3
+
   return score
 }
 
@@ -54,6 +85,30 @@ function pickFriendlyVoice() {
 
 function refreshPreferredVoice() {
   preferredVoice = pickFriendlyVoice()
+  return preferredVoice
+}
+
+/** Currently selected coach voice name (for debugging / UI). */
+export function getPreferredVoiceName() {
+  return preferredVoice?.name || null
+}
+
+/** List scored US-leaning voices so we can try alternatives later. */
+export function listCoachVoices() {
+  if (!isSpeechSupported()) return []
+  return window.speechSynthesis
+    .getVoices()
+    .map((v) => ({ name: v.name, lang: v.lang, score: scoreVoice(v), local: v.localService }))
+    .filter((v) => v.score > 0)
+    .sort((a, b) => b.score - a.score)
+}
+
+/** Force a specific system voice by name (partial match OK). */
+export function setPreferredVoiceByName(namePart) {
+  if (!isSpeechSupported() || !namePart) return null
+  const needle = String(namePart).toLowerCase()
+  const match = window.speechSynthesis.getVoices().find((v) => v.name.toLowerCase().includes(needle))
+  if (match) preferredVoice = match
   return preferredVoice
 }
 
@@ -114,14 +169,22 @@ export function speakQuestion(question) {
   const raw = question.audioPrompt || question.prompt || ''
   const text = String(raw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   const isPlayCall = question.category === 'play-calls' || Boolean(question.meta?.playId)
-  return speak(text, { rate: isPlayCall ? PLAY_CALL_RATE : DEFAULT_RATE })
+  return speak(text, {
+    rate: isPlayCall ? PLAY_CALL_RATE : DEFAULT_RATE,
+    pitch: isPlayCall ? PLAY_CALL_PITCH : DEFAULT_PITCH,
+  })
 }
 
 /** Speak Coach B's play call — accepts a play object or raw string */
 export function speakPlayCall(playOrText, opts = {}) {
   const text = typeof playOrText === 'string' ? playOrText : playOrText?.audioCall
   if (!text) return Promise.resolve()
-  return speak(text, { rate: PLAY_CALL_RATE, ...opts })
+  return speak(text, {
+    rate: PLAY_CALL_RATE,
+    pitch: PLAY_CALL_PITCH,
+    force: true,
+    ...opts,
+  })
 }
 
 /** Replay a question's audio prompt (works even if audio mode is off) */
@@ -130,7 +193,11 @@ export function replayQuestionAudio(question) {
   const text = String(raw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   if (!text) return Promise.resolve()
   const isPlayCall = question?.category === 'play-calls' || Boolean(question?.meta?.playId)
-  return speak(text, { rate: isPlayCall ? PLAY_CALL_RATE : DEFAULT_RATE, force: true })
+  return speak(text, {
+    rate: isPlayCall ? PLAY_CALL_RATE : DEFAULT_RATE,
+    pitch: isPlayCall ? PLAY_CALL_PITCH : DEFAULT_PITCH,
+    force: true,
+  })
 }
 
 /** @param {boolean} correct @param {number} [consecutiveCorrect] */

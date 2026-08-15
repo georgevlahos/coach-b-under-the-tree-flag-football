@@ -125,7 +125,7 @@ export function createYardFieldSvg(opts) {
       height="${FIELD_HEIGHT}" fill="#386641" rx="1"/>
     ${yardGrid()}
     <line x1="${FIELD_LEFT}" y1="${LOS_Y}" x2="${FIELD_RIGHT}" y2="${LOS_Y}"
-      stroke="#eb6d20" stroke-width="0.7" stroke-dasharray="2.2,1.1"/>
+      stroke="#f0ebe3" stroke-width="0.5" stroke-dasharray="2.2,1.1"/>
     ${includeRouteLayer ? '<g class="run-routes"></g>' : ''}
     ${showPlayers ? playerMarkers(spots, highlightId, { unlabeled }) : ''}
   `

@@ -65,7 +65,7 @@ function generateRouteQuestions() {
       options: routeNumberOptions(route.number),
       answer: String(route.number),
       explanation: routeExplanation(route),
-      visual: { mode: 'route-image', routeId: route.id },
+      visual: { mode: 'route-field', routeId: route.id },
     })
 
     qs.push({
@@ -76,7 +76,7 @@ function generateRouteQuestions() {
       options: routeNameOptions(route.name),
       answer: route.name,
       explanation: routeExplanation(route),
-      visual: { mode: 'route-image', routeId: route.id },
+      visual: { mode: 'route-field', routeId: route.id },
     })
 
     qs.push({

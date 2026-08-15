@@ -73,35 +73,46 @@ function mapSpotsToYardField(spots) {
 }
 
 /**
- * Build the shared 35-yard field SVG (Learn Run the Play + play-call quiz).
+ * Build the shared 35-yard field SVG (Learn Run the Play + quizzes + route diagrams).
  * @param {{
- *   formationId: string,
+ *   formationId?: string,
  *   highlightId?: string,
  *   markerId?: string,
  *   className?: string,
  *   ariaLabel?: string,
  *   includeRouteLayer?: boolean,
+ *   spots?: Record<string, { x: number, y: number }>,
+ *   unlabeled?: boolean,
+ *   showPlayers?: boolean,
  * }} opts
  */
 export function createYardFieldSvg(opts) {
   const {
-    formationId,
+    formationId = null,
     highlightId = null,
-    markerId = `yard-field-${formationId}`,
+    markerId = `yard-field-${formationId || 'custom'}`,
     className = '',
     ariaLabel = 'Football field diagram',
     includeRouteLayer = false,
+    spots: spotsOverride = null,
+    unlabeled = false,
+    showPlayers = true,
   } = opts
 
-  const formation = getFormationById(formationId)
-  const spots = mapSpotsToYardField(formation ? { ...formation.spots } : {})
+  let spots = {}
+  if (spotsOverride) {
+    spots = spotsOverride
+  } else if (formationId) {
+    const formation = getFormationById(formationId)
+    spots = mapSpotsToYardField(formation ? { ...formation.spots } : {})
+  }
 
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   svg.setAttribute('viewBox', '0 0 100 100')
   svg.setAttribute('class', `field-svg field-svg--run ${className}`.trim())
   svg.setAttribute('aria-label', ariaLabel)
   svg.dataset.markerId = markerId
-  svg.dataset.formationId = formationId
+  if (formationId) svg.dataset.formationId = formationId
 
   svg.innerHTML = `
     <defs>
@@ -115,10 +126,8 @@ export function createYardFieldSvg(opts) {
     ${yardGrid()}
     <line x1="${FIELD_LEFT}" y1="${LOS_Y}" x2="${FIELD_RIGHT}" y2="${LOS_Y}"
       stroke="#eb6d20" stroke-width="0.7" stroke-dasharray="2.2,1.1"/>
-    <text x="50" y="${LOS_Y - 1.2}" text-anchor="middle" fill="#ffedd5"
-      font-size="2.3" font-weight="700" opacity="0.95">LINE OF SCRIMMAGE</text>
     ${includeRouteLayer ? '<g class="run-routes"></g>' : ''}
-    ${playerMarkers(spots, highlightId)}
+    ${showPlayers ? playerMarkers(spots, highlightId, { unlabeled }) : ''}
   `
 
   return svg
@@ -158,6 +167,116 @@ export function mountRunPlayField(container, play) {
   })
   container.appendChild(svg)
   return svg
+}
+
+/**
+ * Learn / quiz route diagram: unlabeled receiver circle(s) + route path(s)
+ * on the shared 35-yard field. Vertical uses one circle; other routes show
+ * left and right so both breaks are clear.
+ * @param {HTMLElement} container
+ * @param {import('../data/routes.js').Route} route
+ * @param {{ className?: string, animate?: boolean }} [opts]
+ */
+export function mountLearnRouteField(container, route, opts = {}) {
+  container.innerHTML = ''
+  if (!route) return null
+
+  const sides =
+    route.number === 0
+      ? [{ id: 'A', x: 38, y: 68 }]
+      : [
+          { id: 'L', x: 28, y: 68 },
+          { id: 'R', x: 72, y: 68 },
+        ]
+
+  const spots = mapSpotsToYardField(
+    Object.fromEntries(sides.map((s) => [s.id, { x: s.x, y: s.y }])),
+  )
+
+  const markerId = `learn-route-${route.id}`
+  const svg = createYardFieldSvg({
+    markerId,
+    className: opts.className || '',
+    ariaLabel: `Route diagram: ${route.number} - ${route.name}`,
+    includeRouteLayer: true,
+    spots,
+    unlabeled: true,
+  })
+  container.appendChild(svg)
+  paintLearnRoutePaths(svg, route, spots, { animate: opts.animate !== false })
+  return svg
+}
+
+/**
+ * @param {SVGSVGElement} svg
+ * @param {import('../data/routes.js').Route} route
+ * @param {Record<string, { x: number, y: number }>} spots
+ * @param {{ animate?: boolean }} [opts]
+ */
+function paintLearnRoutePaths(svg, route, spots, opts = {}) {
+  const layer = svg.querySelector('.run-routes')
+  if (!layer) return
+
+  layer.innerHTML = ''
+  const markerId = svg.dataset.markerId || `learn-route-${route.id}`
+  const defs = svg.querySelector('defs')
+  const color = '#eb6d20'
+  const paths = []
+
+  for (const [id, spot] of Object.entries(spots)) {
+    const tipId = `${markerId}-${id}`
+    if (defs && !svg.querySelector(`#${CSS.escape(tipId)}`)) {
+      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker')
+      marker.setAttribute('id', tipId)
+      marker.setAttribute('viewBox', '0 0 10 10')
+      marker.setAttribute('refX', '8')
+      marker.setAttribute('refY', '5')
+      marker.setAttribute('markerWidth', '3.5')
+      marker.setAttribute('markerHeight', '3.5')
+      marker.setAttribute('orient', 'auto-start-reverse')
+      const tip = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+      tip.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z')
+      tip.setAttribute('fill', color)
+      marker.appendChild(tip)
+      defs.appendChild(marker)
+    }
+
+    const pathPts = buildAnimatedPath(spot, route)
+    const d = pathPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ')
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    el.setAttribute('d', d)
+    el.setAttribute('fill', 'none')
+    el.setAttribute('stroke', color)
+    el.setAttribute('stroke-width', '1.15')
+    el.setAttribute('stroke-linecap', 'round')
+    el.setAttribute('stroke-linejoin', 'round')
+    el.setAttribute('marker-end', `url(#${tipId})`)
+    el.classList.add('run-route-path')
+    el.dataset.position = id
+    layer.appendChild(el)
+    paths.push(el)
+  }
+
+  if (!opts.animate) {
+    paths.forEach((el) => {
+      el.style.opacity = '1'
+    })
+    return
+  }
+
+  requestAnimationFrame(() => {
+    paths.forEach((el, i) => {
+      const length = el.getTotalLength()
+      el.style.strokeDasharray = String(length)
+      el.style.strokeDashoffset = String(length)
+      el.style.opacity = '1'
+      const delay = i * 90
+      const duration = 900 + Math.min(350, length * 7)
+      el.getBoundingClientRect()
+      el.style.transition = `stroke-dashoffset ${duration}ms ease-out ${delay}ms`
+      el.style.strokeDashoffset = '0'
+    })
+  })
 }
 
 /**
@@ -492,14 +611,15 @@ function fitRelInsideField(spot, rel) {
   }))
 }
 
-function playerMarkers(spots, highlightId = null) {
+function playerMarkers(spots, highlightId = null, opts = {}) {
+  const unlabeled = Boolean(opts.unlabeled)
   return Object.entries(spots)
     .map(([id, spot]) => {
       const pos = positions.find((p) => p.id === id)
-      const label = pos?.shortName || id
-      const color = POS_COLORS[id] || '#dfe6e9'
+      const label = unlabeled ? '' : pos?.shortName || id
+      const color = unlabeled ? '#eb6d20' : POS_COLORS[id] || '#dfe6e9'
       const isHighlight = highlightId && id === highlightId
-      const r = isHighlight ? 3.35 : 2.6
+      const r = unlabeled ? 2.85 : isHighlight ? 3.35 : 2.6
       const stroke = isHighlight ? '#fff' : 'rgba(255,255,255,0.5)'
       const sw = isHighlight ? 0.7 : 0.3
       const fontSize = isHighlight ? 2.35 : 2.1
@@ -507,12 +627,15 @@ function playerMarkers(spots, highlightId = null) {
       const cls = isHighlight
         ? 'player-marker player-marker--session'
         : 'player-marker'
+      const text = label
+        ? `<text x="${spot.x}" y="${spot.y + 0.9}" text-anchor="middle" fill="#fff"
+            font-size="${fontSize}" font-weight="${fontWeight}">${label}</text>`
+        : ''
       return `
         <g class="${cls}" data-position="${id}">
           <circle cx="${spot.x}" cy="${spot.y}" r="${r}" fill="${color}"
             stroke="${stroke}" stroke-width="${sw}"/>
-          <text x="${spot.x}" y="${spot.y + 0.9}" text-anchor="middle" fill="#fff"
-            font-size="${fontSize}" font-weight="${fontWeight}">${label}</text>
+          ${text}
         </g>`
     })
     .join('')

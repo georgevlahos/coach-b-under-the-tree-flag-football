@@ -80,7 +80,6 @@ export function renderField(options = {}) {
     <rect x="2" y="${fieldTop}" width="96" height="${98 - fieldTop}" fill="#386641" rx="1"/>
     ${yardLines(fieldTop)}
     <line x1="2" y1="68" x2="98" y2="68" stroke="#eb6d20" stroke-width="0.6" stroke-dasharray="2,1"/>
-    <text x="50" y="67" text-anchor="middle" fill="#ffedd5" font-size="2.5" opacity="0.9">LINE OF SCRIMMAGE</text>
     ${routePaths(routes)}
     ${playerMarkers(spots, highlightId, interactive)}
   `

@@ -1,6 +1,6 @@
 import { getQuizPositions, getPositionById } from './data/positions.js'
 import { formations } from './data/formations.js'
-import { routes, formatRoute } from './data/routes.js'
+import { routes, formatRoute, getRouteById } from './data/routes.js'
 import { plays } from './data/plays.js'
 import { CATEGORIES, getQuestionsForCategory } from './data/questions.js'
 import {
@@ -16,6 +16,7 @@ import {
   getRunnablePlays,
   mountRunPlayField,
   animateRunPlay,
+  mountLearnRouteField,
 } from './visual/runPlay.js'
 import {
   isSpeechSupported,
@@ -165,7 +166,7 @@ function renderLearnTab() {
             <h3>${formatRoute(r)}</h3>
             <span class="depth-badge depth-${r.depth}">${r.depth}</span>
           </div>
-          <img class="route-learn-image" src="${r.image}" alt="${r.name} route" />
+          <div class="learn-field learn-field--run" data-learn-route="${r.id}"></div>
           <p>${r.description}</p>
         </article>
       `).join('')
@@ -340,6 +341,11 @@ function bindEvents() {
     if (el.dataset.runPlay) {
       const play = plays.find((p) => p.id === el.dataset.runPlay)
       if (play) mountRunPlayField(el, play)
+      return
+    }
+    if (el.dataset.learnRoute) {
+      const route = getRouteById(el.dataset.learnRoute)
+      if (route) mountLearnRouteField(el, route)
       return
     }
     const opts = { compact: true }

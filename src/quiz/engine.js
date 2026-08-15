@@ -1,6 +1,6 @@
 import { recordAnswer } from './progress.js'
 import { renderField, bindFieldInteraction, injectFieldDefs } from '../visual/field.js'
-import { mountYardFormationField } from '../visual/runPlay.js'
+import { mountYardFormationField, mountLearnRouteField } from '../visual/runPlay.js'
 import {
   speakQuestion,
   speakFeedback,
@@ -326,10 +326,13 @@ function renderVisual(el, q, session, onAnswer) {
   el.innerHTML = ''
   if (!q.visual) return
 
-  if (q.visual.mode === 'route-image') {
+  if (q.visual.mode === 'route-field' || q.visual.mode === 'route-image') {
     const route = getRouteById(q.visual.routeId)
-    if (route?.image) {
-      el.innerHTML = `<img class="route-quiz-image" src="${route.image}" alt="Route diagram" />`
+    if (route) {
+      mountLearnRouteField(el, route, {
+        className: 'quiz-field field-svg--quiz-yard',
+        animate: false,
+      })
     }
     return
   }

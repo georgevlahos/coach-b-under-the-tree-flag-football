@@ -57,7 +57,7 @@ export const routes = [
     depth: 'short',
     depthYards: 5.5,
     lateralYards: 7,
-    description: 'About 5–6 yards up, then break toward the middle.',
+    description: '5 yards up, then break toward the middle.',
     image: '/routes/route-4-in.jpeg',
     // Sharp right-angle: stem up, then in (mirrored L/R; clipped so sides never meet)
     path: [
@@ -70,9 +70,12 @@ export const routes = [
     id: '5',
     number: 5,
     name: 'Out',
-    depth: 'medium',
+    depth: 'short',
+    depthYards: 5.5,
+    lateralYards: 7,
     description: '5 yards up, then break toward the sideline.',
     image: '/routes/route-5-out.jpeg',
+    // Sharp right-angle: stem up, then out toward the sideline (mirrored L/R)
     path: [
       { x: 50, y: 68 },
       { x: 50, y: 55 },
@@ -84,18 +87,20 @@ export const routes = [
     number: 6,
     name: 'Curl',
     depth: 'medium',
+    depthYards: 11,
+    lateralYards: 3.5,
     description: '10 yards up, then curl back toward the QB.',
     image: '/routes/route-6-curl.jpeg',
-    // Stem upfield, then inward hook that turns back toward the QB (mirrored L/R)
+    // Stem to ~21 on the diagram, then a tighter inward hook back to the QB
     path: [
       { x: 50, y: 68 },
-      { x: 50, y: 54 },
+      { x: 50, y: 55 },
       { x: 50, y: 42 },
       { x: 50, y: 36 },
-      { x: 54, y: 33 },
-      { x: 60, y: 34 },
-      { x: 63, y: 39 },
-      { x: 61, y: 46 },
+      { x: 52, y: 34 },
+      { x: 55, y: 34.5 },
+      { x: 56.5, y: 37 },
+      { x: 55.5, y: 41 },
     ],
   },
   {
@@ -119,10 +124,11 @@ export const routes = [
     depth: 'deep',
     description: '5 yards up, then deep toward the middle.',
     image: '/routes/route-8-post.jpeg',
+    // Straight stem, then ~45° break toward the post (middle)
     path: [
       { x: 50, y: 68 },
-      { x: 50, y: 50 },
-      { x: 58, y: 28 },
+      { x: 50, y: 48 },
+      { x: 64, y: 34 },
     ],
   },
   {
@@ -132,10 +138,11 @@ export const routes = [
     depth: 'deep',
     description: '5 yards up, then deep toward the corner.',
     image: '/routes/route-9-corner.jpeg',
+    // Straight stem, then ~45° break toward the sideline / corner
     path: [
       { x: 50, y: 68 },
-      { x: 50, y: 50 },
-      { x: 35, y: 28 },
+      { x: 50, y: 48 },
+      { x: 36, y: 34 },
     ],
   },
   {

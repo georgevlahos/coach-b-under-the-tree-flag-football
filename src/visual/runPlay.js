@@ -181,13 +181,7 @@ export function mountLearnRouteField(container, route, opts = {}) {
   container.innerHTML = ''
   if (!route) return null
 
-  const sides =
-    route.number === 0
-      ? [{ id: 'A', x: 38, y: 68 }]
-      : [
-          { id: 'L', x: 28, y: 68 },
-          { id: 'R', x: 72, y: 68 },
-        ]
+  const sides = learnRouteStartSpots(route)
 
   const spots = mapSpotsToYardField(
     Object.fromEntries(sides.map((s) => [s.id, { x: s.x, y: s.y }])),
@@ -205,6 +199,28 @@ export function mountLearnRouteField(container, route, opts = {}) {
   container.appendChild(svg)
   paintLearnRoutePaths(svg, route, spots, { animate: opts.animate !== false })
   return svg
+}
+
+/**
+ * Starting circles for Learn/quiz route diagrams.
+ * Post sits ~25% closer to the sidelines so the 45° breaks read clearly.
+ * @param {import('../data/routes.js').Route} route
+ */
+function learnRouteStartSpots(route) {
+  if (route.number === 0) return [{ id: 'A', x: 50, y: 68 }]
+
+  let leftX = 28
+  let rightX = 72
+  if (route.name === 'Post') {
+    const sidelineInset = 6
+    leftX = leftX - 0.25 * (leftX - sidelineInset)
+    rightX = rightX + 0.25 * (100 - sidelineInset - rightX)
+  }
+
+  return [
+    { id: 'L', x: leftX, y: 68 },
+    { id: 'R', x: rightX, y: 68 },
+  ]
 }
 
 /**

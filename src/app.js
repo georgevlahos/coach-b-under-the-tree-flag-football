@@ -55,7 +55,7 @@ function render() {
   playCallMovie = null
 
   const quizFit = currentPage === 'quiz'
-  // Full brand on the quiz picker; compact only while a quiz session is active
+  // Quiz picker keeps full brand; active quiz drops title text for vertical space
   const headerCompact = quizFit && Boolean(activeSession)
   app.innerHTML = `
     <div class="app-shell ${quizFit ? 'quiz-fit' : ''}">
@@ -71,11 +71,13 @@ function renderHeader(compact = false) {
   return `
     <header class="site-header ${compact ? 'site-header--compact' : ''}">
       <div class="header-brand">
-        <span class="tree-icon">🌳</span>
-        <div>
-          <h1 class="site-title">Coach B</h1>
-          ${compact ? '' : '<p class="site-subtitle">Under the Tree — Flag Football</p>'}
-        </div>
+        <span class="tree-icon" aria-hidden="true">🌳</span>
+        ${compact
+          ? '<span class="visually-hidden">Coach B Under the Tree — Flag Football</span>'
+          : `<div>
+              <h1 class="site-title">Coach B</h1>
+              <p class="site-subtitle">Under the Tree — Flag Football</p>
+            </div>`}
       </div>
     </header>
   `

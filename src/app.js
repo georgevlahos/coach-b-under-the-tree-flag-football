@@ -21,6 +21,7 @@ import {
 import { mountPlayCallMovie } from './learn/playCallMovie.js'
 import {
   isAudioModeEnabled,
+  isSpeechSupported,
   setAudioMode,
   speakPlayCall,
   stopSpeaking,
@@ -79,6 +80,8 @@ function render() {
 }
 
 function renderHeader(compact = false) {
+  const audioOn = isAudioModeEnabled()
+  const audioTitle = audioOn ? 'Turn audio off' : 'Turn audio on'
   return `
     <header class="site-header ${compact ? 'site-header--compact' : ''}">
       <div class="header-brand">
@@ -90,6 +93,19 @@ function renderHeader(compact = false) {
               <p class="site-subtitle">Under the Tree — Flag Football</p>
             </div>`}
       </div>
+      ${isSpeechSupported() ? `
+        <div class="header-stats">
+          <button
+            type="button"
+            class="btn btn-icon ${audioOn ? 'active' : ''}"
+            id="toggle-audio"
+            title="${audioTitle}"
+            aria-label="${audioTitle}"
+            aria-pressed="${audioOn ? 'true' : 'false'}"
+          >
+            ${audioOn ? '🔊' : '🔇'}
+          </button>
+        </div>` : ''}
     </header>
   `
 }
@@ -336,6 +352,13 @@ function renderProgressPage() {
 
 function bindEvents() {
   injectFieldDefs(app)
+
+  app.querySelector('#toggle-audio')?.addEventListener('click', () => {
+    const next = !isAudioModeEnabled()
+    setAudioMode(next)
+    if (!next) stopSpeaking()
+    render()
+  })
 
   app.querySelectorAll('[data-page]').forEach((btn) => {
     btn.addEventListener('click', () => {

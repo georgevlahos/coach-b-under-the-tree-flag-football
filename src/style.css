@@ -814,7 +814,7 @@ body:has(.quiz-fit) #app {
 
 .site-header--compact {
   padding: 0.4rem 1rem;
-  justify-content: center;
+  justify-content: space-between;
 }
 
 .site-header--compact .tree-icon {
@@ -823,6 +823,15 @@ body:has(.quiz-fit) #app {
 
 .site-header--compact .header-brand {
   gap: 0;
+}
+
+.site-header--compact .header-stats {
+  margin-left: auto;
+}
+
+.site-header--compact .btn-icon {
+  font-size: 1rem;
+  padding: 0.3rem 0.45rem;
 }
 
 .main-content--quiz {

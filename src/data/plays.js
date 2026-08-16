@@ -40,6 +40,10 @@ const GUESS_CALLS = [
   'Spread 2-8, H-5',
   'Spread 4-1, H-3, Z-Reverse',
   'Spread 7-0, H-8, L-9',
+  // Extra H-2 plays so Guess foils can share H (avoid a unique H tag)
+  'Spread 4-7, H-2',
+  'Trips Left 6-1-3, H-2, Z-8',
+  'Trips Right 0-5-9, H-2, X-1',
   // Trips Left extras
   'Trips Left 3-8-1, H-0',
   'Trips Left 5-2-9, H-3, R-0',

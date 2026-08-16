@@ -108,9 +108,17 @@ function generateRouteQuestions() {
   return qs
 }
 
+function formationListenOptions(correct) {
+  const pool = ['X and Z', 'L and R', 'Only L', 'Only R', 'Only H', 'Only X', 'Only Z', 'C and Q']
+  return shuffle([correct, ...pickWrong(pool, correct, 3)])
+}
+
 function generateFormationQuestions() {
-  return formations.flatMap((f) => [
-    {
+  /** @type {QuizQuestion[]} */
+  const qs = []
+
+  for (const f of formations) {
+    qs.push({
       id: `form-id-${f.id}`,
       type: 'multiple-choice',
       category: 'formations',
@@ -119,17 +127,108 @@ function generateFormationQuestions() {
       answer: f.name,
       explanation: `${f.name}: ${f.description}`,
       visual: { mode: 'formation', formationId: f.id },
-    },
-    {
-      id: `form-listen-${f.id}`,
+    })
+
+    qs.push({
+      id: `form-listen-1st-${f.id}`,
       type: 'multiple-choice',
       category: 'formations',
       prompt: `In ${f.name}, who listens for the first route number?`,
-      options: shuffle(['X and Z', 'L and R', 'Only H', 'C and Q']),
+      options: formationListenOptions('X and Z'),
       answer: 'X and Z',
-      explanation: `Outside receivers X and Z take the first number unless tagged. (${f.listenFor})`,
-    },
-  ])
+      explanation: `Outside receivers X and Z take the first number unless tagged.<ul class="feedback-details"><li>${f.listenFor.replace(/\n/g, '</li><li>')}</li></ul>`,
+      meta: { listenSlot: 'first', formationId: f.id },
+    })
+
+    if (f.id === 'spread') {
+      qs.push({
+        id: `form-listen-2nd-${f.id}`,
+        type: 'multiple-choice',
+        category: 'formations',
+        prompt: `In ${f.name}, who listens for the second route number?`,
+        options: formationListenOptions('L and R'),
+        answer: 'L and R',
+        explanation: `Slot receivers L and R take the second number unless tagged.<ul class="feedback-details"><li>${f.listenFor.replace(/\n/g, '</li><li>')}</li></ul>`,
+        meta: { listenSlot: 'second', formationId: f.id },
+      })
+    } else if (f.id === 'trips-left') {
+      qs.push({
+        id: `form-listen-2nd-${f.id}`,
+        type: 'multiple-choice',
+        category: 'formations',
+        prompt: `In ${f.name}, who listens for the second route number?`,
+        options: formationListenOptions('Only L'),
+        answer: 'Only L',
+        explanation: `On Trips Left, L takes the second number unless tagged.<ul class="feedback-details"><li>${f.listenFor.replace(/\n/g, '</li><li>')}</li></ul>`,
+        meta: { listenSlot: 'second', formationId: f.id },
+      })
+      qs.push({
+        id: `form-listen-3rd-${f.id}`,
+        type: 'multiple-choice',
+        category: 'formations',
+        prompt: `In ${f.name}, who listens for the third route number?`,
+        options: formationListenOptions('Only R'),
+        answer: 'Only R',
+        explanation: `On Trips Left, R takes the third number unless tagged.<ul class="feedback-details"><li>${f.listenFor.replace(/\n/g, '</li><li>')}</li></ul>`,
+        meta: { listenSlot: 'third', formationId: f.id },
+      })
+    } else if (f.id === 'trips-right') {
+      qs.push({
+        id: `form-listen-2nd-${f.id}`,
+        type: 'multiple-choice',
+        category: 'formations',
+        prompt: `In ${f.name}, who listens for the second route number?`,
+        options: formationListenOptions('Only R'),
+        answer: 'Only R',
+        explanation: `On Trips Right, R takes the second number unless tagged.<ul class="feedback-details"><li>${f.listenFor.replace(/\n/g, '</li><li>')}</li></ul>`,
+        meta: { listenSlot: 'second', formationId: f.id },
+      })
+      qs.push({
+        id: `form-listen-3rd-${f.id}`,
+        type: 'multiple-choice',
+        category: 'formations',
+        prompt: `In ${f.name}, who listens for the third route number?`,
+        options: formationListenOptions('Only L'),
+        answer: 'Only L',
+        explanation: `On Trips Right, L takes the third number unless tagged.<ul class="feedback-details"><li>${f.listenFor.replace(/\n/g, '</li><li>')}</li></ul>`,
+        meta: { listenSlot: 'third', formationId: f.id },
+      })
+    }
+  }
+
+  return qs
+}
+
+/**
+ * Pick formation questions with at most one "first route number" listen question per quiz.
+ * @param {QuizQuestion[]} pool
+ * @param {number} count
+ */
+function pickFormationQuestions(pool, count) {
+  const shuffled = shuffle(pool)
+  /** @type {QuizQuestion[]} */
+  const picked = []
+  let firstListenUsed = false
+
+  for (const q of shuffled) {
+    if (picked.length >= count) break
+    if (q.meta?.listenSlot === 'first') {
+      if (firstListenUsed) continue
+      firstListenUsed = true
+    }
+    picked.push(q)
+  }
+
+  if (picked.length < count) {
+    for (const q of shuffled) {
+      if (picked.length >= count) break
+      if (picked.includes(q)) continue
+      if (q.meta?.listenSlot === 'first') continue
+      picked.push(q)
+    }
+  }
+
+  return shuffle(picked)
 }
 
 function answerChoicesFor(assignment, parsed) {
@@ -207,40 +306,54 @@ function generatePlayCallQuestions() {
 }
 
 /**
+ * Stable label for H's assignment (route # / play name) — used to match foils.
+ * @param {import('./plays.js').Play} play
+ */
+function hAssignmentKey(play) {
+  const a = play?.parsed?.assignments?.H
+  if (!a) return ''
+  return String(a.label || `${a.kind}:${a.routeNumber ?? a.playName ?? ''}`)
+}
+
+/**
  * Multiple-choice options for Guess the Play.
- * Usually mostly same-formation distractors; occasionally includes a different formation
- * so kids also practice reading the formation from the play.
+ * Prefer foils that share H's route/play so kids can't solve from the H tag alone.
+ * Also usually same-formation distractors; occasionally one other-formation foil.
  * @param {import('./plays.js').Play} correct
  * @param {import('./plays.js').Play[]} pool
  */
 function guessPlayCallOptions(correct, pool) {
-  const sameForm = shuffle(
-    pool.filter((p) => p.id !== correct.id && p.formationId === correct.formationId),
-  )
-  const otherForm = shuffle(
-    pool.filter((p) => p.id !== correct.id && p.formationId !== correct.formationId),
-  )
+  const correctH = hAssignmentKey(correct)
+  const others = pool.filter((p) => p.id !== correct.id && p.call !== correct.call)
+
+  const sameH = others.filter((p) => hAssignmentKey(p) === correctH)
+  const diffH = others.filter((p) => hAssignmentKey(p) !== correctH)
+
+  const sameHSameForm = shuffle(sameH.filter((p) => p.formationId === correct.formationId))
+  const sameHOtherForm = shuffle(sameH.filter((p) => p.formationId !== correct.formationId))
+  const diffHSameForm = shuffle(diffH.filter((p) => p.formationId === correct.formationId))
+  const diffHOtherForm = shuffle(diffH.filter((p) => p.formationId !== correct.formationId))
 
   /** @type {import('./plays.js').Play[]} */
   const wrongPlays = []
-
-  // ~45% of the time: plant one other-formation foil among the three wrong answers
-  const includeOtherForm = otherForm.length > 0 && Math.random() < 0.45
-  if (includeOtherForm) {
-    wrongPlays.push(otherForm[0])
-  }
-
-  for (const play of sameForm) {
-    if (wrongPlays.length >= 3) break
-    if (wrongPlays.some((p) => p.call === play.call)) continue
+  const pushUnique = (play) => {
+    if (wrongPlays.length >= 3) return
+    if (wrongPlays.some((p) => p.call === play.call)) return
     wrongPlays.push(play)
   }
 
-  for (const play of otherForm) {
-    if (wrongPlays.length >= 3) break
-    if (wrongPlays.some((p) => p.call === play.call)) continue
-    wrongPlays.push(play)
-  }
+  // Fill same-H foils first (ideally all three wrong answers match H)
+  for (const play of [...sameHSameForm, ...sameHOtherForm]) pushUnique(play)
+
+  // ~45%: if we already have room, prefer an other-formation same-H when available;
+  // otherwise allow one other-formation foil among remaining slots later.
+  const includeOtherForm = Math.random() < 0.45
+
+  // Remaining slots (only if not enough same-H plays in the bank)
+  const fillers = includeOtherForm
+    ? [...diffHOtherForm, ...diffHSameForm]
+    : [...diffHSameForm, ...diffHOtherForm]
+  for (const play of fillers) pushUnique(play)
 
   return shuffle([correct.call, ...wrongPlays.slice(0, 3).map((p) => p.call)])
 }
@@ -325,7 +438,10 @@ export function getQuestionsForCategory(categoryId, count, opts = {}) {
         return { ...q, options: guessPlayCallOptions(play, guessPool) }
       })
   } else if (categoryId === 'formations') {
-    pool = all.filter((q) => q.category === 'formations')
+    return pickFormationQuestions(
+      all.filter((q) => q.category === 'formations'),
+      count,
+    )
   } else if (categoryId === 'mixed') {
     const routesQ = shuffle(all.filter((q) => q.category === 'routes'))
     const playsQ = getQuestionsForCategory('play-calls', Math.ceil(count * 0.5), opts)

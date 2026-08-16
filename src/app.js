@@ -194,7 +194,13 @@ function renderLearnTab() {
     case 'plays':
       return getRunnablePlays(plays).map((play) => `
         <article class="learn-card learn-card--play" data-play-card="${play.id}">
-          <h3 class="play-call-title">${play.call}</h3>
+          <div class="play-card-header">
+            <h3 class="play-call-title">${play.call}</h3>
+            <div class="play-card-actions">
+              <button class="btn btn-sm btn-secondary" data-hear-play="${play.id}">Hear the call</button>
+              <button class="btn btn-sm btn-primary" data-run-play-btn="${play.id}">Run the Play</button>
+            </div>
+          </div>
           <div class="learn-field learn-field--run" data-run-play="${play.id}"></div>
           <ul class="assignment-list">
             ${['X', 'L', 'R', 'Z', 'H'].map((id) => {
@@ -202,10 +208,6 @@ function renderLearnTab() {
               return `<li><strong>${id}:</strong> ${a?.label || '—'}</li>`
             }).join('')}
           </ul>
-          <div class="play-card-actions">
-            <button class="btn btn-sm btn-secondary" data-hear-play="${play.id}">Hear the call</button>
-            <button class="btn btn-sm btn-primary" data-run-play-btn="${play.id}">Run the Play</button>
-          </div>
         </article>
       `).join('')
     default:

@@ -1522,18 +1522,45 @@ body:has(.quiz-fit) #app {
 
 .assignment-list {
   list-style: none;
-  margin: 0.75rem 0;
+  margin: 0.75rem 0 0;
   padding: 0;
   display: grid;
   gap: 0.35rem;
   font-weight: 500;
 }
 
+.play-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem 0.85rem;
+  margin-bottom: 0.35rem;
+}
+
+.play-card-header .play-call-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
 .play-card-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.35rem;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
+@media (max-width: 420px) {
+  .play-card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .play-card-actions {
+    justify-content: flex-start;
+  }
 }
 
 .learn-field--run {

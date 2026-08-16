@@ -1,4 +1,4 @@
-/** Web Speech API wrapper — warm Coach B voice (US English) */
+/** Web Speech API wrapper — warm, friendly US English coach voice */
 
 import { speakableCall } from '../data/playCall.js'
 
@@ -11,8 +11,8 @@ const DEFAULT_RATE = 0.78
 const PLAY_CALL_RATE = 0.551
 const FEEDBACK_RATE = 0.82
 const DEFAULT_PITCH = 1.0
-/** Deeper pitch for a more masculine play-call voice */
-const PLAY_CALL_PITCH = 0.72
+/** Natural pitch for a clear, friendly play-call voice */
+const PLAY_CALL_PITCH = 1.05
 /** Extra hush between play-call slots (formation / numbers / tags) — does not change speaking rate */
 const PLAY_CALL_SLOT_GAP_MS = 180
 
@@ -38,9 +38,9 @@ export function setAudioMode(on) {
 }
 
 /**
- * Prefer a warm US-English male coach voice.
+ * Prefer a warm US-English female coach voice.
  * Note: browsers don’t expose a real “Chicago accent” voice — we pick the
- * warmest available American English male option on the device.
+ * warmest available American English female option on the device.
  */
 function scoreVoice(voice) {
   const name = voice.name || ''
@@ -59,27 +59,28 @@ function scoreVoice(voice) {
 
   let score = 10
 
-  // Warm US male voices commonly available on Apple / Google / Microsoft
-  if (/aaron|alex|tom|nathan|evan|matthew|guy|davis|tony|justin|joey|noah|arthur|daniel|david|james|john|mark|ralph|bruce|gordon|lee|rocko|reed|eddy|flo|sandy|grandpa/i.test(name) && !/female|woman/i.test(name)) {
+  // Warm US female voices commonly available on Apple / Google / Microsoft
+  if (/samantha|nicky|ava|allison|susan|zoe|kathy|stephanie|joanna|salli|kimberly|kendra|ivy|jenny|aria|sara|michelle|grandma/i.test(name)) {
     score += 55
   }
-  // Known warm US female voices — keep as fallback, but below male coach picks
-  if (/samantha|nicky|ava|allison|susan|zoe|kathy|stephanie|joanna|salli|kimberly|kendra|ivy|jenny|aria|sara|michelle|grandma/i.test(name)) {
-    score += 25
+  // Explicit female tags
+  if (/female|woman|\(female\)/i.test(name)) {
+    score += 50
   }
   // Enhanced / natural engines sound much warmer than compact system voices
-  if (/natural|premium|enhanced|neural|wavenet|studio|siri|super|quality/i.test(name)) {
+  if (/natural|premium|enhanced|neural|wavenet|studio|super|quality/i.test(name)) {
     score += 30
   }
   if (/en-US|en_US|english \(us\)|english united states|american/i.test(`${lang} ${name}`)) {
     score += 20
   }
-  // Prefer male for Coach B / Hear the Call
-  if (/male|man|\(male\)|aaron|alex|tom|nathan|evan|matthew|guy|davis|tony|justin|joey|noah|bruce|gordon|lee|rocko|reed|eddy/i.test(name) && !/female|woman/i.test(name)) {
-    score += 50
+  // Soft preference for names that usually sound clearer / friendlier on Apple & Google
+  if (/samantha|nicky|ava|allison|zoe|aria|jenny|salli|joanna/i.test(name)) {
+    score += 20
   }
-  if (/female|woman|\(female\)|samantha|nicky|ava|allison|susan|zoe|kathy|stephanie|jenny|aria|sara|michelle|grandma/i.test(name)) {
-    score -= 40
+  // Down-rank male coach voices so they don’t win
+  if (/male|man|\(male\)|aaron|alex|tom|nathan|evan|matthew|guy|davis|tony|justin|joey|noah|bruce|gordon|lee|rocko|reed|eddy|grandpa/i.test(name) && !/female|woman/i.test(name)) {
+    score -= 45
   }
   if (voice.localService) score += 5
 

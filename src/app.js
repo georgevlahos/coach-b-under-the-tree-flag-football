@@ -171,7 +171,23 @@ function renderLearnTab() {
     case 'routes':
       return `
         <div class="route-review route-review--learn" aria-label="Routes at a glance">
-          <h2 class="route-review-title">Routes at a glance</h2>
+          <div class="route-review-heading">
+            <h2 class="route-review-title">Routes at a glance</h2>
+            <button type="button" class="btn btn-sm btn-secondary" id="route-tip-toggle" aria-pressed="false">
+              Tip to Remember
+            </button>
+          </div>
+          <div class="route-tip-panel hidden" id="route-tip-panel" hidden>
+            <p class="route-tip-line route-tip-line--straight">
+              <strong>Routes 1 &amp; 0 Both Straight</strong> up the field
+            </p>
+            <p class="route-tip-line route-tip-line--even">
+              <strong>Routes 2, 4, 6, 8 Evens In</strong> towards the center of the field
+            </p>
+            <p class="route-tip-line route-tip-line--odd">
+              <strong>Routes 3, 5, 7, 9 Odds Out</strong> towards the sideline
+            </p>
+          </div>
           ${routeReviewGridHtml()}
         </div>
         <div class="learn-routes-divider" role="separator" aria-hidden="true">
@@ -368,6 +384,7 @@ function bindEvents() {
   }
 
   mountRouteReviewFields(app)
+  bindRouteTipToggle(app)
 
   app.querySelectorAll('.learn-field').forEach((el) => {
     if (el.dataset.runPlay) {
@@ -506,7 +523,7 @@ function routeReviewGridHtml() {
       ${ordered
         .map(
           (r) => `
-        <div class="route-review-cell">
+        <div class="route-review-cell" data-route-number="${r.number}" data-tip-group="${tipGroupForRoute(r.number)}">
           <div class="route-review-field" data-review-route="${r.id}"></div>
           <p class="route-review-label"><span class="route-review-num">${r.number}</span> ${r.name}</p>
         </div>`,
@@ -514,6 +531,13 @@ function routeReviewGridHtml() {
         .join('')}
     </div>
   `
+}
+
+/** @param {number} n */
+function tipGroupForRoute(n) {
+  if (n === 0 || n === 1) return 'straight'
+  if (n % 2 === 0) return 'even'
+  return 'odd'
 }
 
 /**
@@ -530,6 +554,26 @@ function mountRouteReviewFields(root) {
         mini: true,
       })
     }
+  })
+}
+
+/**
+ * Learn → Routes: Tip to Remember highlights straight / even-in / odd-out groups.
+ * @param {ParentNode} root
+ */
+function bindRouteTipToggle(root) {
+  const host = root.querySelector('.route-review--learn')
+  const btn = root.querySelector('#route-tip-toggle')
+  const panel = root.querySelector('#route-tip-panel')
+  if (!host || !btn || !panel) return
+
+  btn.addEventListener('click', () => {
+    const on = !host.classList.contains('route-review--tips-on')
+    host.classList.toggle('route-review--tips-on', on)
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false')
+    btn.classList.toggle('active', on)
+    panel.classList.toggle('hidden', !on)
+    panel.hidden = !on
   })
 }
 

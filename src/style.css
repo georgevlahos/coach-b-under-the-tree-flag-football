@@ -1860,6 +1860,98 @@ body:has(.quiz-fit) #app {
   flex-shrink: 0;
 }
 
+.route-review-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin-bottom: 0.15rem;
+}
+
+.route-review-heading .route-review-title {
+  text-align: left;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.route-review-heading #route-tip-toggle {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  padding: 0.35rem 0.55rem;
+}
+
+.route-review-heading #route-tip-toggle.active {
+  border-color: var(--orange);
+  background: rgba(235, 109, 32, 0.12);
+  color: var(--navy);
+}
+
+.route-tip-panel {
+  flex-shrink: 0;
+  display: grid;
+  gap: 0.28rem;
+  margin: 0.15rem 0 0.35rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, rgba(13, 17, 103, 0.05), rgba(235, 109, 32, 0.08));
+  border: 1px solid rgba(13, 17, 103, 0.1);
+}
+
+.route-tip-panel.hidden {
+  display: none;
+}
+
+.route-tip-line {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--navy);
+  line-height: 1.35;
+}
+
+.route-tip-line strong {
+  font-weight: 800;
+}
+
+.route-tip-line--straight strong {
+  color: #0d1167;
+}
+
+.route-tip-line--even strong {
+  color: #1b7a4e;
+}
+
+.route-tip-line--odd strong {
+  color: #c45c12;
+}
+
+.route-review--tips-on .route-review-cell[data-tip-group='straight'] {
+  border-width: 2px;
+  border-color: rgba(13, 17, 103, 0.85);
+  box-shadow: 0 0 0 3px rgba(13, 17, 103, 0.42);
+  background: rgba(13, 17, 103, 0.1);
+}
+
+.route-review--tips-on .route-review-cell[data-tip-group='even'] {
+  border-width: 2px;
+  border-color: rgba(27, 122, 78, 0.85);
+  box-shadow: 0 0 0 3px rgba(27, 122, 78, 0.42);
+  background: rgba(27, 122, 78, 0.14);
+}
+
+.route-review--tips-on .route-review-cell[data-tip-group='odd'] {
+  border-width: 2px;
+  border-color: rgba(235, 109, 32, 0.9);
+  box-shadow: 0 0 0 3px rgba(235, 109, 32, 0.45);
+  background: rgba(235, 109, 32, 0.16);
+}
+
+.route-review--learn.route-review--tips-on {
+  height: min(72dvh, 40rem);
+}
+
 .route-review-grid {
   flex: 1;
   min-height: 0;
@@ -2012,6 +2104,14 @@ body:has(.quiz-fit) #app {
 
   .route-review--learn {
     height: min(58dvh, 36rem);
+  }
+
+  .route-review--learn.route-review--tips-on {
+    height: min(68dvh, 42rem);
+  }
+
+  .route-tip-line {
+    font-size: 0.85rem;
   }
 }
 

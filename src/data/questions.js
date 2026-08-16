@@ -2,7 +2,7 @@ import { routes, formatRoute } from './routes.js'
 import { formations } from './formations.js'
 import { plays } from './plays.js'
 import { getQuizPositions } from './positions.js'
-import { highlightCallForPosition } from './playCall.js'
+import { highlightCallForPosition, speakableCall, withoutTripsDashes } from './playCall.js'
 
 /**
  * @typedef {Object} QuizQuestion
@@ -171,7 +171,13 @@ function generatePlayCallQuestions() {
   /** @type {QuizQuestion[]} */
   const qs = []
 
-  for (const play of plays) {
+  plays.forEach((play, playIndex) => {
+    // Quiz variety: half of Trips calls shown without dashes (193); teaching uses dashes
+    const isTrips = String(play.formationId || '').startsWith('trips')
+    const displayCall =
+      isTrips && playIndex % 2 === 0 ? withoutTripsDashes(play.call) : play.call
+    const displayPlay = { ...play, call: displayCall }
+
     for (const pos of getQuizPositions()) {
       const assignment = play.parsed.assignments[pos.id]
       if (!assignment) continue
@@ -180,11 +186,11 @@ function generatePlayCallQuestions() {
         id: `pc-${play.id}-${pos.id}`,
         type: 'multiple-choice',
         category: 'play-calls',
-        prompt: `What do you do on this play call?<br><span class="play-call-cue">"${play.call}"</span>`,
+        prompt: `What do you do on this play call?<br><span class="play-call-cue">"${displayCall}"</span>`,
         options: answerChoicesFor(assignment, play.parsed),
         answer: assignment.label,
-        explanation: playCallExplanation(pos, play, assignment),
-        audioPrompt: play.audioCall,
+        explanation: playCallExplanation(pos, displayPlay, assignment),
+        audioPrompt: speakableCall(displayCall),
         visual: { mode: 'formation', formationId: play.formationId, highlightId: pos.id },
         meta: {
           playId: play.id,
@@ -193,7 +199,7 @@ function generatePlayCallQuestions() {
         },
       })
     }
-  }
+  })
 
   return qs
 }

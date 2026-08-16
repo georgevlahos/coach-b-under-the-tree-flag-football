@@ -68,8 +68,9 @@ export function parsePlayCall(call) {
     assignments.R = routeAssignment(b)
     rest = rest.slice(m[0].length).replace(/^[,\s]+/, '')
   } else {
-    const m = rest.match(/^(\d)(\d)(\d)\b/)
-    if (!m) throw new Error(`Expected Trips ABC in: ${call}`)
+    // Trips: accept 193 or 1-9-3 (dashes optional — teach with dashes, quiz may mix)
+    const m = rest.match(/^(\d)\s*-?\s*(\d)\s*-?\s*(\d)\b/)
+    if (!m) throw new Error(`Expected Trips A-B-C in: ${call}`)
     const a = Number(m[1])
     const b = Number(m[2])
     const c = Number(m[3])
@@ -188,8 +189,31 @@ export function speakableCall(call) {
     .replace(/\bRazer\b/gi, 'Razer')
     .replace(/\bXavier\b/gi, 'Xavier')
     .replace(/\bZazer\b/gi, 'Zazer')
+    .replace(/\b(\d)\s*-\s*(\d)\s*-\s*(\d)\b/g, '$1 $2 $3')
     .replace(/(\d)-(\d)/g, '$1 $2')
     .replace(/\b(\d{3})\b/g, (digits) => digits.split('').join(' '))
+}
+
+/**
+ * Teaching form: Trips route digits written with dashes (1-9-3).
+ * @param {string} call
+ */
+export function withTripsDashes(call) {
+  return String(call).replace(
+    /\b(Trips (?:Left|Right)\s+)(\d)(\d)(\d)\b/i,
+    (_, head, a, b, c) => `${head}${a}-${b}-${c}`,
+  )
+}
+
+/**
+ * Compact Trips digits without dashes (193) — useful for quiz variety.
+ * @param {string} call
+ */
+export function withoutTripsDashes(call) {
+  return String(call).replace(
+    /\b(Trips (?:Left|Right)\s+)(\d)\s*-\s*(\d)\s*-\s*(\d)\b/i,
+    (_, head, a, b, c) => `${head}${a}${b}${c}`,
+  )
 }
 
 /**
@@ -269,18 +293,28 @@ export function highlightCallForPosition(call, positionId, formationId) {
       }
     }
   } else {
-    const m = call.match(/\b(\d)(\d)(\d)\b/)
+    // 193 or 1-9-3
+    const m = call.match(/\b(\d)\s*-?\s*(\d)\s*-?\s*(\d)\b/)
     if (m?.index != null) {
-      let digit = -1
-      if (pos === 'X' || pos === 'Z') digit = 0
+      let which = -1
+      if (pos === 'X' || pos === 'Z') which = 1
       else if (formId === 'trips-left') {
-        if (pos === 'L') digit = 1
-        else if (pos === 'R') digit = 2
-      } else if (pos === 'R') digit = 1
-      else if (pos === 'L') digit = 2
+        if (pos === 'L') which = 2
+        else if (pos === 'R') which = 3
+      } else if (pos === 'R') which = 2
+      else if (pos === 'L') which = 3
 
-      if (digit >= 0) {
-        return wrapCallRange(call, m.index + digit, m.index + digit + 1)
+      if (which >= 1) {
+        const full = m[0]
+        let offset = 0
+        if (which === 1) {
+          offset = 0
+        } else if (which === 2) {
+          offset = full.indexOf(m[2], 1)
+        } else {
+          offset = full.lastIndexOf(m[3])
+        }
+        return wrapCallRange(call, m.index + offset, m.index + offset + 1)
       }
     }
   }

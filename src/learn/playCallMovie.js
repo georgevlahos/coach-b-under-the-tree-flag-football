@@ -71,7 +71,6 @@ function formulaGraphic(kind, opts = {}) {
           <span class="pcm-bucket-hint">optional</span>
         </span>
       </div>
-      <p class="pcm-formula-tip">Think of each <strong>Number</strong> as a slot — listen for the one that belongs to your position.</p>
     </div>
   `
 }
@@ -93,7 +92,6 @@ function spreadScenes() {
       html: `
         ${formulaGraphic('spread', { active: 'formation' })}
         <p class="pcm-lead">First you hear <strong>Spread</strong> — where everyone lines up.</p>
-        <p class="pcm-note">X &amp; L left · R &amp; Z right · H in the backfield</p>
       `,
     },
     {
@@ -104,7 +102,7 @@ function spreadScenes() {
         ${formulaGraphic('spread', { active: 'n1' })}
         <p class="pcm-lead">The <strong>1st Number</strong> is the outside slot.</p>
         <div class="pcm-map">
-          <div class="pcm-map-row"><span class="pcm-digit">1st</span> <span><strong>X</strong> and <strong>Z</strong> both listen here</span></div>
+          <div class="pcm-map-row"><span><strong>X</strong> and <strong>Z</strong> both listen here for <span class="pcm-digit">1st Number</span></span></div>
         </div>
         <p class="pcm-example">Example: <strong>Spread <span class="pcm-hl">2</span>-3, H-7</strong> → X &amp; Z run <strong>2</strong></p>
       `,
@@ -117,10 +115,9 @@ function spreadScenes() {
         ${formulaGraphic('spread', { active: 'n2' })}
         <p class="pcm-lead">The <strong>2nd Number</strong> is the slot.</p>
         <div class="pcm-map">
-          <div class="pcm-map-row"><span class="pcm-digit">2nd</span> <span><strong>L</strong> and <strong>R</strong> both listen here</span></div>
+          <div class="pcm-map-row"><span><strong>L</strong> and <strong>R</strong> both listen here for <span class="pcm-digit">2nd Number</span></span></div>
         </div>
         <p class="pcm-example">Example: <strong>Spread 2-<span class="pcm-hl">3</span>, H-7</strong> → L &amp; R run <strong>3</strong></p>
-        <p class="pcm-note">Mirrored: left and right share the same two slots (written <strong>A-B</strong>).</p>
       `,
     },
     {
@@ -176,7 +173,8 @@ function spreadScenes() {
         <ol class="pcm-steps">
           <li><strong>1st Number</strong> → X &amp; Z</li>
           <li><strong>2nd Number</strong> → L &amp; R</li>
-          <li><strong>H</strong> always tagged · optional <strong>Tag</strong> wins</li>
+          <li><strong>H</strong> always tagged</li>
+          <li>optional <strong>Tag</strong> wins</li>
         </ol>
       `,
     },
@@ -189,7 +187,7 @@ function tripsLeftScenes() {
       id: 'tl-formula',
       title: 'How Play Calls Work: Trips Left',
       html: `
-        <p class="pcm-lead">Trips Left uses <strong>three</strong> number slots (no dashes between digits).</p>
+        <p class="pcm-lead">Trips Left uses <strong>three</strong> number slots.</p>
         ${formulaGraphic('trips-left')}
       `,
     },
@@ -212,7 +210,7 @@ function tripsLeftScenes() {
         <div class="pcm-map">
           <div class="pcm-map-row"><span><strong>X</strong> and <strong>Z</strong> both listen for the <span class="pcm-digit">1st Number</span></span></div>
         </div>
-        <p class="pcm-example">Example: <strong>Trips Left <span class="pcm-hl">1</span>93 …</strong> → X &amp; Z run <strong>1</strong></p>
+        <p class="pcm-example">Example: <strong>Trips Left <span class="pcm-hl">1</span>-9-3 …</strong> → X &amp; Z run <strong>1</strong></p>
       `,
     },
     {
@@ -225,7 +223,7 @@ function tripsLeftScenes() {
         <div class="pcm-map">
           <div class="pcm-map-row"><span><strong>L</strong> listens for the <span class="pcm-digit">2nd Number</span></span></div>
         </div>
-        <p class="pcm-example">Example: <strong>Trips Left 1<span class="pcm-hl">9</span>3 …</strong> → L runs <strong>9</strong></p>
+        <p class="pcm-example">Example: <strong>Trips Left 1-<span class="pcm-hl">9</span>-3 …</strong> → L runs <strong>9</strong></p>
       `,
     },
     {
@@ -238,7 +236,7 @@ function tripsLeftScenes() {
         <div class="pcm-map">
           <div class="pcm-map-row"><span><strong>R</strong> listens for the <span class="pcm-digit">3rd Number</span></span></div>
         </div>
-        <p class="pcm-example">Example: <strong>Trips Left 19<span class="pcm-hl">3</span> …</strong> → R runs <strong>3</strong></p>
+        <p class="pcm-example">Example: <strong>Trips Left 1-9-<span class="pcm-hl">3</span> …</strong> → R runs <strong>3</strong></p>
       `,
     },
     {
@@ -261,7 +259,7 @@ function tripsLeftScenes() {
       html: `
         <p class="pcm-call">
           <span class="pcm-part pcm-part--formation is-on">Trips Left</span>
-          <span class="pcm-part pcm-part--routes is-on">193</span>
+          <span class="pcm-part pcm-part--routes is-on">1-9-3</span>
           <span class="pcm-part pcm-part--tags is-on">Hazer Right-3, Z-2</span>
         </p>
         <div class="pcm-assign">
@@ -279,9 +277,10 @@ function tripsLeftScenes() {
       html: `
         ${formulaGraphic('trips-left')}
         <ol class="pcm-steps">
-          <li><strong>1st</strong> → X &amp; Z · <strong>2nd</strong> → L · <strong>3rd</strong> → R</li>
-          <li>Digits stay together: <strong>193</strong> (no commas)</li>
-          <li><strong>H</strong> always tagged · optional <strong>Tag</strong> wins</li>
+          <li><strong>1st Number</strong> → X &amp; Z · <strong>2nd Number</strong> → L · <strong>3rd Number</strong> → R</li>
+          <li>Written with dashes: <strong>1-9-3</strong></li>
+          <li><strong>H</strong> always tagged</li>
+          <li>optional <strong>Tag</strong> wins</li>
         </ol>
       `,
     },
@@ -317,7 +316,7 @@ function tripsRightScenes() {
         <div class="pcm-map">
           <div class="pcm-map-row"><span class="pcm-digit">1st</span> <span><strong>X</strong> and <strong>Z</strong> both listen here</span></div>
         </div>
-        <p class="pcm-example">Example: <strong>Trips Right <span class="pcm-hl">1</span>93 …</strong> → X &amp; Z run <strong>1</strong></p>
+        <p class="pcm-example">Example: <strong>Trips Right <span class="pcm-hl">1</span>-9-3 …</strong> → X &amp; Z run <strong>1</strong></p>
       `,
     },
     {
@@ -330,7 +329,7 @@ function tripsRightScenes() {
         <div class="pcm-map">
           <div class="pcm-map-row"><span><strong>R</strong> listens for the <span class="pcm-digit">2nd Number</span></span></div>
         </div>
-        <p class="pcm-example">Example: <strong>Trips Right 1<span class="pcm-hl">9</span>3 …</strong> → R runs <strong>9</strong></p>
+        <p class="pcm-example">Example: <strong>Trips Right 1-<span class="pcm-hl">9</span>-3 …</strong> → R runs <strong>9</strong></p>
       `,
     },
     {
@@ -343,7 +342,7 @@ function tripsRightScenes() {
         <div class="pcm-map">
           <div class="pcm-map-row"><span class="pcm-digit">3rd</span> <span><strong>L</strong> listens here</span></div>
         </div>
-        <p class="pcm-example">Example: <strong>Trips Right 19<span class="pcm-hl">3</span> …</strong> → L runs <strong>3</strong></p>
+        <p class="pcm-example">Example: <strong>Trips Right 1-9-<span class="pcm-hl">3</span> …</strong> → L runs <strong>3</strong></p>
         <p class="pcm-note">Remember: Trips Right flips the slots vs Trips Left.</p>
       `,
     },
@@ -367,7 +366,7 @@ function tripsRightScenes() {
       html: `
         <p class="pcm-call">
           <span class="pcm-part pcm-part--formation is-on">Trips Right</span>
-          <span class="pcm-part pcm-part--routes is-on">911</span><span class="pcm-comma">,</span>
+          <span class="pcm-part pcm-part--routes is-on">9-1-1</span><span class="pcm-comma">,</span>
           <span class="pcm-part pcm-part--tags is-on">Hazer Right-3, L-Reverse</span>
         </p>
         <div class="pcm-assign">
@@ -385,9 +384,10 @@ function tripsRightScenes() {
       html: `
         ${formulaGraphic('trips-right')}
         <ol class="pcm-steps">
-          <li><strong>1st</strong> → X &amp; Z · <strong>2nd</strong> → R · <strong>3rd</strong> → L</li>
-          <li>Same ABC look as Trips Left — slots are swapped</li>
-          <li><strong>H</strong> always tagged · optional <strong>Tag</strong> wins</li>
+          <li><strong>1st Number</strong> → X &amp; Z · <strong>2nd Number</strong> → R · <strong>3rd Number</strong> → L</li>
+          <li>Written with dashes: <strong>1-9-3</strong> — slots swapped vs Trips Left</li>
+          <li><strong>H</strong> always tagged</li>
+          <li>optional <strong>Tag</strong> wins</li>
         </ol>
       `,
     },

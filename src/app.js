@@ -27,7 +27,7 @@ import {
 
 /** @type {'home' | 'learn' | 'quiz' | 'progress'} */
 let currentPage = 'home'
-let learnTab = 'how-calls'
+let learnTab = 'formations'
 /** @type {{ destroy: () => void } | null} */
 let playCallMovie = null
 /** @type {QuizSession | null} */
@@ -85,7 +85,7 @@ function renderNav() {
   const items = [
     { id: 'home', label: 'Home', icon: '🏠' },
     { id: 'learn', label: 'Learn', icon: '📖' },
-    { id: 'quiz', label: 'Quiz', icon: '🎯' },
+    { id: 'quiz', label: 'Quizzes', icon: '🎯' },
     { id: 'progress', label: 'Progress', icon: '🏆' },
   ]
   return `
@@ -117,7 +117,7 @@ function renderHome() {
         Learn your routes and what to run when Coach calls a play.
       </p>
       <div class="hero-actions">
-        <button class="btn btn-primary btn-lg" data-action="go-learn"><span class="hero-cta-word">Learn</span>Routes, Play &amp; Play Calls</button>
+        <button class="btn btn-primary btn-lg" data-action="go-learn"><span class="hero-cta-word">Learn</span>On Routes, Formations &amp; Play Calls</button>
         <button class="btn btn-secondary btn-lg" data-action="go-quiz"><span class="hero-cta-word">Quiz Me</span>On Routes, Formations &amp; Play Calls</button>
       </div>
     </section>
@@ -126,26 +126,18 @@ function renderHome() {
 
 function renderLearn() {
   const tabs = [
-    { id: 'how-calls', label: 'How calls work' },
-    { id: 'routes', label: 'Routes' },
     { id: 'formations', label: 'Formations' },
+    { id: 'routes', label: 'Routes' },
+    { id: 'how-calls', label: 'How Play Calls Work' },
     { id: 'plays', label: 'Play Call Examples' },
   ]
   if (learnTab === 'positions') learnTab = 'routes'
-  const quizCat = learnTab === 'plays' || learnTab === 'how-calls' ? 'play-calls' : learnTab
-  const quizLabel =
-    learnTab === 'plays' || learnTab === 'how-calls'
-      ? 'play calls'
-      : learnTab
   return `
     <section class="learn-page">
       <div class="learn-tabs">
         ${tabs.map((t) => `<button class="learn-tab ${learnTab === t.id ? 'active' : ''}" data-tab="${t.id}">${t.label}</button>`).join('')}
       </div>
       <div class="learn-content" id="learn-content">${renderLearnTab()}</div>
-      <div class="learn-quiz-cta">
-        <button class="btn btn-primary" data-quiz-cat="${quizCat}">Quiz me on ${quizLabel}!</button>
-      </div>
     </section>
   `
 }
@@ -160,7 +152,7 @@ function renderLearnTab() {
           <h3>${f.name}</h3>
           <div class="learn-field" data-formation="${f.id}"></div>
           <p>${f.description}</p>
-          <p class="learn-tip"><strong>Listen for:</strong> ${f.listenFor}</p>
+          <p class="learn-tip">${f.listenFor.replace(/\n/g, '<br>')}</p>
         </article>
       `).join('')
     case 'routes':

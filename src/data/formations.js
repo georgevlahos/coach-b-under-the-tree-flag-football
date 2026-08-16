@@ -12,9 +12,9 @@ export const formations = [
   {
     id: 'spread',
     name: 'Spread',
-    description: 'Receivers spread evenly — two left (X, L), two right (R, Z). Q is directly behind C; H is offset in the backfield.',
+    description: 'Receivers spread evenly — two left (X, L), two right (R, Z). H is offset in the backfield.',
     whenToUse: 'Default look. Outside run the first number; slots run the second (mirrored).',
-    listenFor: 'X & Z = 1st number · L & R = 2nd number · H from tag',
+    listenFor: 'X & Z listen for 1st Number\nL & R listen for 2nd number\nH listen for tag',
     spots: {
       X: { x: 12, y: 68 },
       L: { x: 30, y: 68 },
@@ -30,7 +30,7 @@ export const formations = [
     name: 'Trips Left',
     description: 'Three receivers bunched on the left (X, L, R). Z alone on the far right.',
     whenToUse: 'Flood the left. Digits go outside → L → R.',
-    listenFor: 'X & Z = 1st · L = 2nd · R = 3rd · H from tag',
+    listenFor: 'X & Z listen for 1st Number\nL listen for 2nd number\nR listen for 3rd number\nH listen for tag',
     spots: {
       X: { x: 10, y: 68 },
       L: { x: 20, y: 68 },
@@ -46,7 +46,7 @@ export const formations = [
     name: 'Trips Right',
     description: 'X alone on the far left. Three receivers bunched on the right (L, R, Z).',
     whenToUse: 'Flood the right. Digits go outside → R → L.',
-    listenFor: 'X & Z = 1st · R = 2nd · L = 3rd · H from tag',
+    listenFor: 'X & Z listen for 1st Number\nR listen for 2nd number\nL listen for 3rd number\nH listen for tag',
     spots: {
       X: { x: 12, y: 68 },
       C: { x: 50, y: 68 },

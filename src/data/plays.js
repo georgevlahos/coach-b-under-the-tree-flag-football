@@ -1,6 +1,6 @@
 import { parsePlayCall } from './playCall.js'
 
-/** Example play calls from docs/BASICS.md */
+/** Example play calls — teaching form uses dashes for Trips (1-9-3). Quiz may also show undashed. */
 const CALLS = [
   'Spread 0-1, H-0',
   'Spread 2-3, H-9',
@@ -9,14 +9,14 @@ const CALLS = [
   'Spread 2-3, H-8, R-0',
   'Spread 8-1, H-3, X-7',
   'Spread 9-1, H-5, Z-Reverse',
-  'Trips Right 193 Hazer Left-3, X-2',
-  'Trips Right 222, H-3, X-8',
-  'Trips Right 911, Hazer Right-3, L-Reverse',
-  'Trips Right 910, Xavier Right-3, H-fake run left',
-  'Trips Left 193 Hazer Right-3, Z-2',
-  'Trips Left 222, H-3, Z-8',
-  'Trips Left 911, Hazer Right-3, R-Fake Reverse',
-  'Trips Left 910, Zazer Left-3, H-fake run right',
+  'Trips Right 1-9-3 Hazer Left-3, X-2',
+  'Trips Right 2-2-2, H-3, X-8',
+  'Trips Right 9-1-1, Hazer Right-3, L-Reverse',
+  'Trips Right 9-1-0, Xavier Right-3, H-fake run left',
+  'Trips Left 1-9-3 Hazer Right-3, Z-2',
+  'Trips Left 2-2-2, H-3, Z-8',
+  'Trips Left 9-1-1, Hazer Right-3, R-Fake Reverse',
+  'Trips Left 9-1-0, Zazer Left-3, H-fake run right',
 ]
 
 /**

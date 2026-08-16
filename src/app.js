@@ -10,7 +10,7 @@ import {
   getDifficulty,
 } from './data/difficulty.js'
 import { loadProgress, BADGE_INFO, resetProgress } from './quiz/progress.js'
-import { QuizSession, renderQuiz } from './quiz/engine.js'
+import { QuizSession, renderQuiz, abortQuiz } from './quiz/engine.js'
 import { renderField, injectFieldDefs } from './visual/field.js'
 import {
   getRunnablePlays,
@@ -23,6 +23,7 @@ import {
   isAudioModeEnabled,
   setAudioMode,
   speakPlayCall,
+  stopSpeaking,
 } from './audio/speech.js'
 
 /** @type {'home' | 'learn' | 'quiz' | 'progress'} */
@@ -32,6 +33,16 @@ let learnTab = 'formations'
 let playCallMovie = null
 /** @type {QuizSession | null} */
 let activeSession = null
+
+/** End any in-progress quiz (timers + speech) before leaving or restarting. */
+function endActiveQuiz() {
+  abortQuiz()
+  stopSpeaking()
+  activeSession = null
+  showYouAreIntro = false
+  showRouteReview = false
+  app.classList.remove('cue-audio-focus')
+}
 /** Show "You are the …" splash before play-call quiz questions */
 let showYouAreIntro = false
 /** Show mini route sheet before Rookie routes quiz */
@@ -311,19 +322,20 @@ function bindEvents() {
   app.querySelectorAll('[data-page]').forEach((btn) => {
     btn.addEventListener('click', () => {
       currentPage = btn.dataset.page
-      activeSession = null
+      endActiveQuiz()
       render()
     })
   })
 
   app.querySelector('[data-action="go-learn"]')?.addEventListener('click', () => {
     currentPage = 'learn'
+    endActiveQuiz()
     render()
   })
 
   app.querySelector('[data-action="go-quiz"]')?.addEventListener('click', () => {
     currentPage = 'quiz'
-    activeSession = null
+    endActiveQuiz()
     render()
   })
 
@@ -331,7 +343,7 @@ function bindEvents() {
     btn.addEventListener('click', () => {
       quizCategory = btn.dataset.quizCat
       currentPage = 'quiz'
-      activeSession = null
+      endActiveQuiz()
       // Play calls: pick position first. Routes/formations can start immediately.
       if (quizCategory === 'play-calls') {
         render()
@@ -466,9 +478,7 @@ function bindEvents() {
         renderQuiz(container, activeSession, (action) => {
           if (action === 'retry') startQuiz(quizCategory, activeSession.questions.length)
           else {
-            activeSession = null
-            showYouAreIntro = false
-            showRouteReview = false
+            endActiveQuiz()
             currentPage = 'quiz'
             render()
           }
@@ -569,6 +579,8 @@ function renderYouAreIntro(container, positionId) {
 }
 
 function startQuiz(category, count) {
+  abortQuiz()
+  stopSpeaking()
   const opts = category === 'play-calls' ? { positionId: quizPosition } : {}
   const questions = getQuestionsForCategory(category, count, opts)
   const pos = category === 'play-calls' ? getPositionById(quizPosition) : null

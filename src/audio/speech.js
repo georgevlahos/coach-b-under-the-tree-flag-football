@@ -1,5 +1,7 @@
 /** Web Speech API wrapper — warm Coach B voice (US English) */
 
+import { speakableCall } from '../data/playCall.js'
+
 let enabled = false
 /** @type {SpeechSynthesisVoice | null} */
 let preferredVoice = null
@@ -209,7 +211,7 @@ export function speakQuestion(question) {
   const text = String(raw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   if (!text) return Promise.resolve()
   const isPlayCall = question.category === 'play-calls'
-  if (isPlayCall) return speakPlayCallText(text)
+  if (isPlayCall) return speakPlayCallText(speakableCall(text))
   return speak(text, {
     rate: DEFAULT_RATE,
     pitch: DEFAULT_PITCH,
@@ -218,9 +220,10 @@ export function speakQuestion(question) {
 
 /** Speak Coach B's play call — accepts a play object or raw string */
 export function speakPlayCall(playOrText, opts = {}) {
-  const text = typeof playOrText === 'string' ? playOrText : playOrText?.audioCall
-  if (!text) return Promise.resolve()
-  return speakPlayCallText(text, { force: true, ...opts })
+  const raw = typeof playOrText === 'string' ? playOrText : playOrText?.audioCall
+  if (!raw) return Promise.resolve()
+  // Always normalize so position letters never say "capital R" etc.
+  return speakPlayCallText(speakableCall(raw), { force: true, ...opts })
 }
 
 /** Replay a question's audio prompt (works even if audio mode is off) */
@@ -230,7 +233,7 @@ export function replayQuestionAudio(question) {
   const text = String(raw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   if (!text) return Promise.resolve()
   const isPlayCall = question?.category === 'play-calls'
-  if (isPlayCall) return speakPlayCallText(text, { force: true })
+  if (isPlayCall) return speakPlayCallText(speakableCall(text), { force: true })
   return speak(text, {
     rate: DEFAULT_RATE,
     pitch: DEFAULT_PITCH,

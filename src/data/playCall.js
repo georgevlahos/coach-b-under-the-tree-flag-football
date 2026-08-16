@@ -181,6 +181,15 @@ function titleCaseFormation(s) {
     .join(' ')
 }
 
+/** Spoken forms for position IDs — avoids TTS saying "capital R" etc. */
+const POSITION_LETTER_SAY = {
+  H: 'Aitch',
+  L: 'El',
+  R: 'Are',
+  X: 'Ex',
+  Z: 'Zee',
+}
+
 /** Make TTS clearer with short pauses between formation, numbers, and tags */
 export function speakableCall(call) {
   return String(call)
@@ -204,6 +213,8 @@ export function speakableCall(call) {
     // Written commas between tags → same slot pause
     .replace(/,\s*/g, ' ... ')
     .replace(/(?:\s*\.\.\.\s*)+/g, ' ... ')
+    // Position letters as their own slot — phonetic so voices don't say "capital …"
+    .replace(/\b([HLRXZ])\b/gi, (_, ch) => POSITION_LETTER_SAY[ch.toUpperCase()] || ch)
     .trim()
 }
 

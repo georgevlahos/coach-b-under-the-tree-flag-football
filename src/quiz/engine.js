@@ -156,8 +156,22 @@ function streakCheer(streak) {
   return 'Great job!'
 }
 
+/** Cancels the in-flight question timer/raf when leaving a quiz mid-question. */
+let abortActiveQuestion = null
+
+/** Stop timers (and ignore late timeouts) for the active quiz question. */
+export function abortQuiz() {
+  if (abortActiveQuestion) {
+    abortActiveQuestion()
+    abortActiveQuestion = null
+  }
+}
+
 /** @param {HTMLElement} container @param {QuizSession} session @param {() => void} onComplete */
 export function renderQuiz(container, session, onComplete) {
+  // New question replaces any previous abort hook
+  abortQuiz()
+
   container.innerHTML = ''
   let timerId = null
   let rafId = null
@@ -272,6 +286,9 @@ export function renderQuiz(container, session, onComplete) {
     clearTimers()
   }
 
+  // So footer/nav can kill this question's timer after the DOM is gone
+  abortActiveQuestion = cancelQuestion
+
   const startQuestionTimer = () => {
     if (cancelled || timerStarted || session.answered || !limitSec || !timerFill || !timerLabel) return
     timerStarted = true
@@ -318,7 +335,7 @@ export function renderQuiz(container, session, onComplete) {
   }
 
   function handleAnswer(answer, fromTimeout = false) {
-    if (session.answered) return
+    if (session.answered || cancelled) return
     const elapsedSec =
       questionStartedAt != null ? (performance.now() - questionStartedAt) / 1000 : null
     cancelQuestion()

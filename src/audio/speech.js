@@ -204,9 +204,11 @@ export function stopSpeaking() {
 
 /** Speak a quiz prompt — uses audioPrompt if available (play calls: call only) */
 export function speakQuestion(question) {
+  if (question?.category === 'guess-the-play') return Promise.resolve()
   const raw = question.audioPrompt || question.prompt || ''
   const text = String(raw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-  const isPlayCall = question.category === 'play-calls' || Boolean(question.meta?.playId)
+  if (!text) return Promise.resolve()
+  const isPlayCall = question.category === 'play-calls'
   if (isPlayCall) return speakPlayCallText(text)
   return speak(text, {
     rate: DEFAULT_RATE,
@@ -223,10 +225,11 @@ export function speakPlayCall(playOrText, opts = {}) {
 
 /** Replay a question's audio prompt (works even if audio mode is off) */
 export function replayQuestionAudio(question) {
+  if (question?.category === 'guess-the-play') return Promise.resolve()
   const raw = question?.audioPrompt || question?.prompt || ''
   const text = String(raw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   if (!text) return Promise.resolve()
-  const isPlayCall = question?.category === 'play-calls' || Boolean(question?.meta?.playId)
+  const isPlayCall = question?.category === 'play-calls'
   if (isPlayCall) return speakPlayCallText(text, { force: true })
   return speak(text, {
     rate: DEFAULT_RATE,

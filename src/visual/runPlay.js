@@ -415,17 +415,26 @@ export function animateRunPlay(svg, play) {
     }
   }
 
-  requestAnimationFrame(() => {
-    paths.forEach((el, i) => {
-      const length = el.getTotalLength()
-      el.style.strokeDasharray = String(length)
-      el.style.strokeDashoffset = String(length)
-      el.style.opacity = '1'
-      const delay = i * 80
-      const duration = 1100 + Math.min(400, length * 8)
-      el.getBoundingClientRect()
-      el.style.transition = `stroke-dashoffset ${duration}ms ease-out ${delay}ms`
-      el.style.strokeDashoffset = '0'
+  return new Promise((resolve) => {
+    if (!paths.length) {
+      resolve()
+      return
+    }
+    requestAnimationFrame(() => {
+      let maxEnd = 0
+      paths.forEach((el, i) => {
+        const length = el.getTotalLength()
+        el.style.strokeDasharray = String(length)
+        el.style.strokeDashoffset = String(length)
+        el.style.opacity = '1'
+        const delay = i * 80
+        const duration = 1100 + Math.min(400, length * 8)
+        maxEnd = Math.max(maxEnd, delay + duration)
+        el.getBoundingClientRect()
+        el.style.transition = `stroke-dashoffset ${duration}ms ease-out ${delay}ms`
+        el.style.strokeDashoffset = '0'
+      })
+      setTimeout(resolve, maxEnd + 60)
     })
   })
 }

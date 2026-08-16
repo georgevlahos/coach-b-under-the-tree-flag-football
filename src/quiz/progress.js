@@ -64,7 +64,7 @@ function checkBadges(p) {
   if (p.totalCorrect >= 100) badges.add('touchdown')
   if (p.bestStreak >= 5) badges.add('hot-streak')
   if (p.bestStreak >= 10) badges.add('on-fire')
-  for (const cat of ['routes', 'play-calls', 'formations']) {
+  for (const cat of ['routes', 'play-calls', 'guess-the-play', 'formations']) {
     const c = p.byCategory[cat]
     if (c && c.correct >= 10) badges.add(`master-${cat}`)
   }
@@ -81,6 +81,7 @@ export const BADGE_INFO = {
   'on-fire': { label: 'On Fire! (10)', emoji: '💥' },
   'master-routes': { label: 'Route Runner', emoji: '🏃‍♀️' },
   'master-play-calls': { label: 'Play Caller', emoji: '📢' },
+  'master-guess-the-play': { label: 'Play Spotter', emoji: '👀' },
   'master-formations': { label: 'Formation Expert', emoji: '📐' },
 }
 

@@ -1,8 +1,9 @@
 import { routes, formatRoute } from './routes.js'
 import { formations } from './formations.js'
-import { plays } from './plays.js'
+import { plays, guessPlays } from './plays.js'
 import { getQuizPositions } from './positions.js'
 import { highlightCallForPosition, speakableCall, withoutTripsDashes } from './playCall.js'
+import { getRunnablePlays } from '../visual/runPlay.js'
 
 /**
  * @typedef {Object} QuizQuestion
@@ -21,6 +22,7 @@ import { highlightCallForPosition, speakableCall, withoutTripsDashes } from './p
 export const CATEGORIES = [
   { id: 'routes', label: 'Test Me on Routes', emoji: '🏃', color: '#eb6d20' },
   { id: 'play-calls', label: 'Test Me on Play Calls', emoji: '📢', color: '#0d1167' },
+  { id: 'guess-the-play', label: 'Guess the Play', emoji: '👀', color: '#2a9d8f' },
   { id: 'formations', label: 'Formations', emoji: '📐', color: '#3d5a80' },
 ]
 
@@ -204,6 +206,84 @@ function generatePlayCallQuestions() {
   return qs
 }
 
+/**
+ * Multiple-choice options for Guess the Play.
+ * Usually mostly same-formation distractors; occasionally includes a different formation
+ * so kids also practice reading the formation from the play.
+ * @param {import('./plays.js').Play} correct
+ * @param {import('./plays.js').Play[]} pool
+ */
+function guessPlayCallOptions(correct, pool) {
+  const sameForm = shuffle(
+    pool.filter((p) => p.id !== correct.id && p.formationId === correct.formationId),
+  )
+  const otherForm = shuffle(
+    pool.filter((p) => p.id !== correct.id && p.formationId !== correct.formationId),
+  )
+
+  /** @type {import('./plays.js').Play[]} */
+  const wrongPlays = []
+
+  // ~45% of the time: plant one other-formation foil among the three wrong answers
+  const includeOtherForm = otherForm.length > 0 && Math.random() < 0.45
+  if (includeOtherForm) {
+    wrongPlays.push(otherForm[0])
+  }
+
+  for (const play of sameForm) {
+    if (wrongPlays.length >= 3) break
+    if (wrongPlays.some((p) => p.call === play.call)) continue
+    wrongPlays.push(play)
+  }
+
+  for (const play of otherForm) {
+    if (wrongPlays.length >= 3) break
+    if (wrongPlays.some((p) => p.call === play.call)) continue
+    wrongPlays.push(play)
+  }
+
+  return shuffle([correct.call, ...wrongPlays.slice(0, 3).map((p) => p.call)])
+}
+
+function guessPlayExplanation(play) {
+  const lineup = ['X', 'L', 'R', 'Z', 'H']
+    .map((id) => {
+      const a = play.parsed.assignments[id]
+      return `${id}: ${a?.label || '—'}`
+    })
+    .join('  ·  ')
+
+  return (
+    `The call was <strong>"${play.call}"</strong>.` +
+    `<ul class="feedback-details"><li>${lineup}</li></ul>`
+  )
+}
+
+function generateGuessPlayQuestions() {
+  const pool = getRunnablePlays(guessPlays)
+  /** @type {QuizQuestion[]} */
+  const qs = []
+
+  for (const play of pool) {
+    qs.push({
+      id: `guess-${play.id}`,
+      type: 'multiple-choice',
+      category: 'guess-the-play',
+      prompt: 'Watch the play — what was the call?',
+      // Options are filled fresh when the quiz starts (so formation foils reshuffle)
+      options: [],
+      answer: play.call,
+      explanation: guessPlayExplanation(play),
+      // Do not speak the call — that would give away the answer
+      audioPrompt: '',
+      visual: { mode: 'run-play', playId: play.id, formationId: play.formationId },
+      meta: { playId: play.id, formationId: play.formationId },
+    })
+  }
+
+  return qs
+}
+
 let _cache = null
 
 export function generateAllQuestions() {
@@ -211,6 +291,7 @@ export function generateAllQuestions() {
   _cache = [
     ...generateRouteQuestions(),
     ...generatePlayCallQuestions(),
+    ...generateGuessPlayQuestions(),
     ...generateFormationQuestions(),
   ]
   return _cache
@@ -233,6 +314,16 @@ export function getQuestionsForCategory(categoryId, count, opts = {}) {
       (q) => q.category === 'play-calls' && q.meta?.positionId === positionId,
     )
     return shuffle(pool).slice(0, count)
+  } else if (categoryId === 'guess-the-play') {
+    const guessPool = getRunnablePlays(guessPlays)
+    const byId = new Map(guessPool.map((p) => [p.id, p]))
+    pool = all
+      .filter((q) => q.category === 'guess-the-play')
+      .map((q) => {
+        const play = byId.get(q.meta?.playId)
+        if (!play) return q
+        return { ...q, options: guessPlayCallOptions(play, guessPool) }
+      })
   } else if (categoryId === 'formations') {
     pool = all.filter((q) => q.category === 'formations')
   } else if (categoryId === 'mixed') {

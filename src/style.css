@@ -625,7 +625,7 @@ body {
   background: var(--bg-card);
   border: 2px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius);
-  padding: 1rem;
+  padding: 0.85rem 0.65rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -634,7 +634,9 @@ body {
   font-family: var(--font);
   font-weight: 700;
   color: var(--text);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  text-align: center;
   transition: border-color 0.15s;
 }
 
@@ -2114,9 +2116,23 @@ body:has(.quiz-fit) #app {
   border: 1px solid rgba(13, 17, 103, 0.08);
 }
 
-/* Audio-focus: hide play-call text until they answer (then show with feedback) */
-.cue-audio-focus .quiz-card:not(.quiz-card--answered) .play-call-cue {
-  display: none;
+.quiz-card--guess-play .btn-answer {
+  font-size: 0.78rem;
+  line-height: 1.25;
+  padding: 0.55rem 0.45rem;
+  white-space: normal;
+  text-align: center;
+}
+
+.quiz-card--guess-play .answer-grid {
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+}
+
+@media (min-width: 520px) {
+  .quiz-card--guess-play .answer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .field-svg {

@@ -1,6 +1,11 @@
 import { recordAnswer } from './progress.js'
 import { renderField, bindFieldInteraction, injectFieldDefs } from '../visual/field.js'
-import { mountYardFormationField, mountLearnRouteField } from '../visual/runPlay.js'
+import {
+  mountYardFormationField,
+  mountLearnRouteField,
+  mountRunPlayField,
+  animateRunPlay,
+} from '../visual/runPlay.js'
 import {
   speakQuestion,
   speakFeedback,
@@ -8,6 +13,7 @@ import {
   replayQuestionAudio,
 } from '../audio/speech.js'
 import { getRouteById } from '../data/routes.js'
+import { getPlayById } from '../data/plays.js'
 import { getDifficulty, SPEED_BONUS_POINTS } from '../data/difficulty.js'
 
 /** @typedef {import('../data/questions.js').QuizQuestion} QuizQuestion */
@@ -177,10 +183,11 @@ export function renderQuiz(container, session, onComplete) {
   const difficulty = session.difficulty
   const limitSec = difficulty.seconds
   const isPlayCall = session.category === 'play-calls' || q.category === 'play-calls'
+  const isGuessPlay = session.category === 'guess-the-play' || q.category === 'guess-the-play'
   const isFormation = session.category === 'formations' || q.category === 'formations'
 
   const el = document.createElement('div')
-  el.className = `quiz-card quiz-card--fit${isPlayCall ? ' quiz-card--play-calls' : ''}${isFormation ? ' quiz-card--formations' : ''}`
+  el.className = `quiz-card quiz-card--fit${isPlayCall || isGuessPlay ? ' quiz-card--play-calls' : ''}${isGuessPlay ? ' quiz-card--guess-play' : ''}${isFormation ? ' quiz-card--formations' : ''}`
   const positionChip = session.positionId
     ? `
       <div class="quiz-position-chip" aria-live="polite" title="${session.positionLabel || session.positionId}">
@@ -210,7 +217,7 @@ export function renderQuiz(container, session, onComplete) {
         </div>` : ''}
     </div>
     <div class="quiz-body">
-      <div class="quiz-prompt-area${isPlayCall ? ' quiz-prompt-area--play' : ''}">
+      <div class="quiz-prompt-area${isPlayCall || isGuessPlay ? ' quiz-prompt-area--play' : ''}">
         <div class="quiz-prompt-row">
           <div class="quiz-prompt">${q.prompt}</div>
           ${isPlayCall ? positionChip : ''}
@@ -219,6 +226,10 @@ export function renderQuiz(container, session, onComplete) {
         ${isPlayCall ? `
           <button type="button" class="btn btn-sm btn-replay" id="btn-replay-call">
             🔁 Hear call again
+          </button>` : ''}
+        ${isGuessPlay ? `
+          <button type="button" class="btn btn-sm btn-replay" id="btn-replay-play">
+            🔁 Run play again
           </button>` : ''}
       </div>
       <div class="quiz-visual" id="quiz-visual"></div>
@@ -238,12 +249,17 @@ export function renderQuiz(container, session, onComplete) {
   const timerFill = el.querySelector('#quiz-timer-fill')
   const timerLabel = el.querySelector('#quiz-timer-label')
 
-  renderVisual(visualEl, q, session, (answer) => handleAnswer(answer))
+  const runAnim = renderVisual(visualEl, q, session, (answer) => handleAnswer(answer))
   renderAnswers(answersEl, q, session)
   bindAnswerButtons(answersEl, q, (answer) => handleAnswer(answer))
 
   el.querySelector('#btn-replay-call')?.addEventListener('click', () => {
     replayQuestionAudio(q)
+  })
+  el.querySelector('#btn-replay-play')?.addEventListener('click', () => {
+    const play = getPlayById(q.visual?.playId)
+    const svg = visualEl.querySelector('svg')
+    if (play && svg) animateRunPlay(svg, play)
   })
 
   let cancelled = false
@@ -285,7 +301,13 @@ export function renderQuiz(container, session, onComplete) {
     timerLabel.textContent = `${limitSec}s`
   }
 
-  if (isAudioModeEnabled()) {
+  if (isGuessPlay) {
+    // Hold the clock until the play animation finishes (same idea as waiting for audio)
+    Promise.resolve(runAnim).finally(() => {
+      if (cancelled || session.answered) return
+      startQuestionTimer()
+    })
+  } else if (isAudioModeEnabled()) {
     // Don't start the clock until the spoken prompt/call finishes
     Promise.resolve(speakQuestion(q)).finally(() => {
       if (cancelled || session.answered) return
@@ -352,7 +374,7 @@ export function renderQuiz(container, session, onComplete) {
 
 function renderVisual(el, q, session, onAnswer) {
   el.innerHTML = ''
-  if (!q.visual) return
+  if (!q.visual) return Promise.resolve()
 
   if (q.visual.mode === 'route-field' || q.visual.mode === 'route-image') {
     const route = getRouteById(q.visual.routeId)
@@ -362,7 +384,15 @@ function renderVisual(el, q, session, onAnswer) {
         animate: false,
       })
     }
-    return
+    return Promise.resolve()
+  }
+
+  if (q.visual.mode === 'run-play' && q.visual.playId) {
+    const play = getPlayById(q.visual.playId)
+    if (!play) return Promise.resolve()
+    const svg = mountRunPlayField(el, play)
+    svg.classList.add('field-svg--quiz-yard')
+    return animateRunPlay(svg, play)
   }
 
   // Play-call / formation quiz: same 30-yard field as Learn → Play Calls
@@ -372,7 +402,7 @@ function renderVisual(el, q, session, onAnswer) {
       highlightId: session.positionId || q.visual.highlightId,
       className: 'quiz-field field-svg--quiz-yard',
     })
-    return
+    return Promise.resolve()
   }
 
   const opts = { className: 'quiz-field' }
@@ -394,6 +424,7 @@ function renderVisual(el, q, session, onAnswer) {
   const svg = renderField(opts)
   el.appendChild(svg)
   if (opts.interactive) bindFieldInteraction(svg, onAnswer)
+  return Promise.resolve()
 }
 
 function renderAnswers(el, q, session) {

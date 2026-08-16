@@ -37,8 +37,8 @@ let showYouAreIntro = false
 /** Show mini route sheet before Rookie routes quiz */
 let showRouteReview = false
 let quizCategory = 'routes'
-let quizCueMode = 'both'
-let quizCount = 5
+let quizCueMode = 'audio'
+let quizCount = 8
 /** @type {string} */
 let quizPosition = 'X'
 /** @type {import('./data/difficulty.js').DifficultyId} */
@@ -215,7 +215,7 @@ function renderQuizPage() {
         <h2>Pick a Quiz</h2>
         <p class="quiz-picker-sub">How many questions?</p>
         <div class="count-picker">
-          ${[5, 10, 15, 20].map((n) => `<button class="btn btn-count ${n === quizCount ? 'active' : ''}" data-count="${n}">${n}</button>`).join('')}
+          ${[8, 16].map((n) => `<button class="btn btn-count ${n === quizCount ? 'active' : ''}" data-count="${n}">${n}</button>`).join('')}
         </div>
         <div class="category-picker">
           ${CATEGORIES.map((cat) => `
@@ -251,10 +251,10 @@ function renderQuizPage() {
           </div>
           <div class="cue-picker">
             <p class="quiz-picker-sub">Play-call cues</p>
-            <div class="count-picker">
-              <button class="btn btn-count ${quizCueMode === 'both' ? 'active' : ''}" data-cue="both">Text + Audio</button>
-              <button class="btn btn-count ${quizCueMode === 'text' ? 'active' : ''}" data-cue="text">Text only</button>
-              <button class="btn btn-count ${quizCueMode === 'audio' ? 'active' : ''}" data-cue="audio">Audio focus</button>
+            <div class="cue-picker-row">
+              <button class="btn btn-cue ${quizCueMode === 'both' ? 'active' : ''}" data-cue="both">Text + Audio</button>
+              <button class="btn btn-cue ${quizCueMode === 'text' ? 'active' : ''}" data-cue="text">Text only</button>
+              <button class="btn btn-cue ${quizCueMode === 'audio' ? 'active' : ''}" data-cue="audio">Audio Focus</button>
             </div>
           </div>
         ` : ''}
@@ -423,10 +423,10 @@ function bindEvents() {
     })
   })
 
-  app.querySelectorAll('.btn-count[data-cue]').forEach((btn) => {
+  app.querySelectorAll('.btn-cue[data-cue]').forEach((btn) => {
     btn.addEventListener('click', () => {
       quizCueMode = btn.dataset.cue
-      app.querySelectorAll('.btn-count[data-cue]').forEach((b) => b.classList.toggle('active', b === btn))
+      app.querySelectorAll('.btn-cue[data-cue]').forEach((b) => b.classList.toggle('active', b === btn))
       if (quizCueMode === 'audio' || quizCueMode === 'both') setAudioMode(true)
       if (quizCueMode === 'text') setAudioMode(false)
     })

@@ -181,17 +181,30 @@ function titleCaseFormation(s) {
     .join(' ')
 }
 
-/** Make TTS a bit clearer */
+/** Make TTS clearer with short pauses between formation, numbers, and tags */
 export function speakableCall(call) {
-  return call
+  return String(call)
     .replace(/\bHazer\b/gi, 'Hazer')
     .replace(/\bLazer\b/gi, 'Lazer')
     .replace(/\bRazer\b/gi, 'Razer')
     .replace(/\bXavier\b/gi, 'Xavier')
     .replace(/\bZazer\b/gi, 'Zazer')
-    .replace(/\b(\d)\s*-\s*(\d)\s*-\s*(\d)\b/g, '$1 $2 $3')
-    .replace(/(\d)-(\d)/g, '$1 $2')
-    .replace(/\b(\d{3})\b/g, (digits) => digits.split('').join(' '))
+    // Pause after formation name
+    .replace(/^(Spread|Trips Left|Trips Right)\b/i, '$1 ...')
+    // Route number blocks: pause between each digit slot
+    .replace(/\b(\d)\s*-\s*(\d)\s*-\s*(\d)\b/g, '$1 ... $2 ... $3')
+    .replace(/(\d)-(\d)/g, '$1 ... $2')
+    .replace(/\b(\d{3})\b/g, (digits) => digits.split('').join(' ... '))
+    // Pause before a named tag that follows a number (no comma in the written call)
+    .replace(/(\d)\s+(?=[A-Za-z])/g, '$1 ... ')
+    // Position / motion tags: pause before the route # or named play
+    .replace(/\b([HLRXZ])-(\d)\b/gi, '$1 ... $2')
+    .replace(/\b([HLRXZ])-([A-Za-z][\w]*(?:\s+[\w]+)*)/gi, '$1 ... $2')
+    .replace(/\b(Left|Right)-(\d)\b/gi, '$1 ... $2')
+    // Written commas between tags → same slot pause
+    .replace(/,\s*/g, ' ... ')
+    .replace(/(?:\s*\.\.\.\s*)+/g, ' ... ')
+    .trim()
 }
 
 /**

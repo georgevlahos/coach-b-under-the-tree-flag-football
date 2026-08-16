@@ -8,7 +8,7 @@ import {
   replayQuestionAudio,
 } from '../audio/speech.js'
 import { getRouteById } from '../data/routes.js'
-import { getDifficulty } from '../data/difficulty.js'
+import { getDifficulty, SPEED_BONUS_POINTS } from '../data/difficulty.js'
 
 /** @typedef {import('../data/questions.js').QuizQuestion} QuizQuestion */
 
@@ -26,6 +26,8 @@ export class QuizSession {
     this.difficultyId = opts.difficultyId || 'rookie'
     this.index = 0
     this.score = 0
+    this.correctCount = 0
+    this.bonusPoints = 0
     this.consecutiveCorrect = 0
     this.answered = false
     this.selectedAnswer = null
@@ -48,17 +50,29 @@ export class QuizSession {
     return getDifficulty(this.difficultyId)
   }
 
-  /** @param {string | boolean} answer */
-  submit(answer) {
+  /**
+   * @param {string | boolean} answer
+   * @param {{ elapsedSec?: number }} [timing]
+   */
+  submit(answer, timing = {}) {
     if (this.answered || this.isComplete) return null
     const q = this.current
     const correct = checkAnswer(q, answer)
     this.answered = true
     this.selectedAnswer = answer
     this.timedOut = false
+    let speedBonus = false
     if (correct) {
+      this.correctCount++
       this.score++
       this.consecutiveCorrect++
+      const elapsed = timing.elapsedSec
+      const bonusSec = this.difficulty.speedBonusSeconds
+      if (elapsed != null && bonusSec != null && elapsed < bonusSec) {
+        this.score += SPEED_BONUS_POINTS
+        this.bonusPoints += SPEED_BONUS_POINTS
+        speedBonus = true
+      }
     } else {
       this.consecutiveCorrect = 0
     }
@@ -69,6 +83,7 @@ export class QuizSession {
       consecutiveCorrect: this.consecutiveCorrect,
       cheer: correct ? streakCheer(this.consecutiveCorrect) : null,
       timedOut: false,
+      speedBonus,
     }
   }
 
@@ -87,6 +102,7 @@ export class QuizSession {
       consecutiveCorrect: 0,
       cheer: null,
       timedOut: true,
+      speedBonus: false,
     }
   }
 
@@ -232,6 +248,8 @@ export function renderQuiz(container, session, onComplete) {
 
   let cancelled = false
   let timerStarted = false
+  /** @type {number | null} */
+  let questionStartedAt = null
 
   const cancelQuestion = () => {
     cancelled = true
@@ -241,8 +259,9 @@ export function renderQuiz(container, session, onComplete) {
   const startQuestionTimer = () => {
     if (cancelled || timerStarted || session.answered || !limitSec || !timerFill || !timerLabel) return
     timerStarted = true
+    questionStartedAt = performance.now()
 
-    const started = performance.now()
+    const started = questionStartedAt
     const tick = (now) => {
       if (session.answered || cancelled) return
       const elapsed = (now - started) / 1000
@@ -278,9 +297,13 @@ export function renderQuiz(container, session, onComplete) {
 
   function handleAnswer(answer, fromTimeout = false) {
     if (session.answered) return
+    const elapsedSec =
+      questionStartedAt != null ? (performance.now() - questionStartedAt) / 1000 : null
     cancelQuestion()
 
-    const result = fromTimeout ? session.submitTimeout() : session.submit(answer)
+    const result = fromTimeout
+      ? session.submitTimeout()
+      : session.submit(answer, { elapsedSec: elapsedSec ?? undefined })
     if (!result) return
 
     renderAnswers(answersEl, q, session)
@@ -302,12 +325,17 @@ export function renderQuiz(container, session, onComplete) {
       <div class="feedback-top">
         <span class="feedback-icon">${result.correct ? '✅' : '❌'}</span>
         ${result.timedOut ? '<span class="feedback-cheer">Time\'s up!</span>' : ''}
+        ${result.speedBonus ? `<span class="feedback-cheer">Speed bonus! +${SPEED_BONUS_POINTS}</span>` : ''}
         ${result.cheer ? `<span class="feedback-cheer">${result.cheer}</span>` : ''}
       </div>
       <div class="feedback-text">${explanation}</div>
     `
 
     if (isAudioModeEnabled()) speakFeedback(result.correct, result.consecutiveCorrect)
+
+    // Refresh score in header after bonuses
+    const scoreEl = el.querySelector('.quiz-score')
+    if (scoreEl) scoreEl.textContent = `Score: ${session.score}`
 
     actionsEl.innerHTML = `
       <button class="btn btn-primary btn-next" id="btn-next">
@@ -422,19 +450,35 @@ function escapeAttr(s) {
 }
 
 function renderResults(container, session, onComplete) {
-  const pct = Math.round((session.score / session.questions.length) * 100)
+  const total = session.questions.length
+  const correct = session.correctCount ?? session.score
+  const pct = total ? Math.round((correct / total) * 100) : 0
   const msg =
     pct === 100 ? 'Perfect game! You\'re a star! ⭐' :
     pct >= 80 ? 'Great job — almost touchdown range!' :
     pct >= 60 ? 'Good work! Keep practicing!' :
     'Keep at it — every rep makes you better!'
 
+  const bonusSec = session.difficulty.speedBonusSeconds
+  const bonusLine =
+    session.bonusPoints > 0
+      ? `<p class="results-bonus">Speed bonuses: +${session.bonusPoints} (under ${bonusSec}s)</p>`
+      : ''
+
+  const half = Math.ceil(total / 2)
+  const levelUpTip =
+    session.difficultyId === 'rookie' && session.bonusPoints >= half
+      ? `<p class="results-levelup">You're answering most questions within 8 seconds — try <strong>Pro Bowler</strong> for a tougher clock!</p>`
+      : ''
+
   container.innerHTML = `
     <div class="quiz-results">
       <div class="results-trophy">${pct >= 80 ? '🏆' : '🏈'}</div>
       <h2>Quiz Complete!</h2>
-      <p class="results-score">${session.score} / ${session.questions.length}</p>
-      <p class="results-pct">${pct}%</p>
+      <p class="results-score">${session.score} pts</p>
+      <p class="results-pct">${correct} / ${total} correct · ${pct}%</p>
+      ${bonusLine}
+      ${levelUpTip}
       <p class="results-msg">${msg}</p>
       <p class="results-difficulty">${session.difficulty.label} mode</p>
       <div class="results-actions">

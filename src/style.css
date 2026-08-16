@@ -1132,8 +1132,9 @@ body:has(.quiz-fit) #app {
 }
 
 .difficulty-picker {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 0.4rem;
 }
 
@@ -1142,6 +1143,8 @@ body:has(.quiz-fit) #app {
   flex-direction: column;
   align-items: center;
   gap: 0.15rem;
+  flex: 1 1 10rem;
+  max-width: 14rem;
   padding: 0.5rem 0.35rem;
   background: #fff;
   color: var(--navy);
@@ -1216,6 +1219,25 @@ body:has(.quiz-fit) #app {
   color: var(--text-muted);
   font-weight: 700;
   margin-bottom: 0.75rem;
+}
+
+.results-bonus {
+  color: var(--orange);
+  font-weight: 800;
+  font-size: 0.95rem;
+  margin: 0.15rem 0 0.65rem;
+}
+
+.results-levelup {
+  color: var(--navy);
+  font-weight: 600;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  margin: 0.15rem 0 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(235, 109, 32, 0.1);
+  border: 1px solid rgba(235, 109, 32, 0.28);
+  border-radius: var(--radius-sm);
 }
 
 /* Desktop: route / diagram images ~50% larger */
@@ -1989,6 +2011,56 @@ body:has(.quiz-fit) #app {
   margin: 1rem 0;
 }
 
+.cue-picker-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.btn-cue {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto !important;
+  height: auto !important;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm) !important;
+  border: 1.5px solid rgba(13, 17, 103, 0.1);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+  font-family: var(--font);
+  font-weight: 800;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-cue:hover {
+  transform: translateY(-1px);
+  border-color: rgba(13, 17, 103, 0.22);
+}
+
+.btn-cue.active {
+  border-color: var(--primary);
+  background: rgba(232, 93, 117, 0.15);
+  color: var(--primary);
+  box-shadow: 0 8px 18px rgba(235, 109, 32, 0.16);
+}
+
+@media (max-width: 420px) {
+  .cue-picker-row {
+    flex-direction: column;
+  }
+
+  .btn-cue {
+    width: 100% !important;
+    white-space: normal;
+  }
+}
+
 .quiz-card,
 .quiz-picker,
 .progress-page {
@@ -2042,8 +2114,8 @@ body:has(.quiz-fit) #app {
   border: 1px solid rgba(13, 17, 103, 0.08);
 }
 
-/* Audio-focus: hide on-screen play call text cue */
-.cue-audio-focus .play-call-cue {
+/* Audio-focus: hide play-call text until they answer (then show with feedback) */
+.cue-audio-focus .quiz-card:not(.quiz-card--answered) .play-call-cue {
   display: none;
 }
 

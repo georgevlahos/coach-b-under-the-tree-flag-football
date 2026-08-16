@@ -6,11 +6,17 @@ let preferredVoice = null
 
 const DEFAULT_RATE = 0.78
 /** Slightly slower — calm sideline cadence for play calls */
-const PLAY_CALL_RATE = 0.58
+const PLAY_CALL_RATE = 0.551
 const FEEDBACK_RATE = 0.82
 const DEFAULT_PITCH = 1.0
 /** Deeper pitch for a more masculine play-call voice */
 const PLAY_CALL_PITCH = 0.72
+/** Extra hush between play-call slots (formation / numbers / tags) — does not change speaking rate */
+const PLAY_CALL_SLOT_GAP_MS = 180
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 export function isSpeechSupported() {
   return 'speechSynthesis' in window
@@ -138,7 +144,7 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
   })
 }
 
-/** @param {string} text @param {{ rate?: number, pitch?: number, force?: boolean }} [opts] */
+/** @param {string} text @param {{ rate?: number, pitch?: number, force?: boolean, cancel?: boolean }} [opts] */
 export async function speak(text, opts = {}) {
   if ((!enabled && !opts.force) || !isSpeechSupported()) return
 
@@ -146,7 +152,7 @@ export async function speak(text, opts = {}) {
   const voice = preferredVoice || pickFriendlyVoice()
 
   return new Promise((resolve) => {
-    window.speechSynthesis.cancel()
+    if (opts.cancel !== false) window.speechSynthesis.cancel()
     const utter = new SpeechSynthesisUtterance(text)
     utter.rate = opts.rate ?? DEFAULT_RATE
     utter.pitch = opts.pitch ?? DEFAULT_PITCH
@@ -162,6 +168,36 @@ export async function speak(text, opts = {}) {
   })
 }
 
+/**
+ * Speak a play call slot-by-slot with a short gap between parts.
+ * Rate/pitch stay the same — only the silence between slots grows.
+ * @param {string} text
+ * @param {{ force?: boolean }} [opts]
+ */
+async function speakPlayCallText(text, opts = {}) {
+  const parts = String(text)
+    .split(/\s*\.\.\.\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  if (!parts.length) return
+
+  const speakOpts = {
+    rate: PLAY_CALL_RATE,
+    pitch: PLAY_CALL_PITCH,
+    force: opts.force,
+  }
+
+  if (parts.length === 1) {
+    return speak(parts[0], speakOpts)
+  }
+
+  if (window.speechSynthesis) window.speechSynthesis.cancel()
+  for (let i = 0; i < parts.length; i++) {
+    await speak(parts[i], { ...speakOpts, cancel: false })
+    if (i < parts.length - 1) await delay(PLAY_CALL_SLOT_GAP_MS)
+  }
+}
+
 export function stopSpeaking() {
   if (window.speechSynthesis) window.speechSynthesis.cancel()
 }
@@ -171,9 +207,10 @@ export function speakQuestion(question) {
   const raw = question.audioPrompt || question.prompt || ''
   const text = String(raw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   const isPlayCall = question.category === 'play-calls' || Boolean(question.meta?.playId)
+  if (isPlayCall) return speakPlayCallText(text)
   return speak(text, {
-    rate: isPlayCall ? PLAY_CALL_RATE : DEFAULT_RATE,
-    pitch: isPlayCall ? PLAY_CALL_PITCH : DEFAULT_PITCH,
+    rate: DEFAULT_RATE,
+    pitch: DEFAULT_PITCH,
   })
 }
 
@@ -181,12 +218,7 @@ export function speakQuestion(question) {
 export function speakPlayCall(playOrText, opts = {}) {
   const text = typeof playOrText === 'string' ? playOrText : playOrText?.audioCall
   if (!text) return Promise.resolve()
-  return speak(text, {
-    rate: PLAY_CALL_RATE,
-    pitch: PLAY_CALL_PITCH,
-    force: true,
-    ...opts,
-  })
+  return speakPlayCallText(text, { force: true, ...opts })
 }
 
 /** Replay a question's audio prompt (works even if audio mode is off) */
@@ -195,9 +227,10 @@ export function replayQuestionAudio(question) {
   const text = String(raw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   if (!text) return Promise.resolve()
   const isPlayCall = question?.category === 'play-calls' || Boolean(question?.meta?.playId)
+  if (isPlayCall) return speakPlayCallText(text, { force: true })
   return speak(text, {
-    rate: isPlayCall ? PLAY_CALL_RATE : DEFAULT_RATE,
-    pitch: isPlayCall ? PLAY_CALL_PITCH : DEFAULT_PITCH,
+    rate: DEFAULT_RATE,
+    pitch: DEFAULT_PITCH,
     force: true,
   })
 }

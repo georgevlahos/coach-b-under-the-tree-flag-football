@@ -2,6 +2,7 @@ import { routes, formatRoute } from './routes.js'
 import { formations } from './formations.js'
 import { plays } from './plays.js'
 import { getQuizPositions } from './positions.js'
+import { highlightCallForPosition } from './playCall.js'
 
 /**
  * @typedef {Object} QuizQuestion
@@ -155,11 +156,13 @@ function playCallExplanation(pos, play, assignment) {
       const mark = id === pos.id ? '✓ ' : ''
       return `${mark}${id}: ${a?.label || '—'}`
     })
-    .join(' · ')
+    .join('  ·  ')
+
+  const callHtml = highlightCallForPosition(play.call, pos.id, play.formationId)
 
   return (
-    `For <strong>${pos.shortName}</strong> on "${play.call}": ` +
-    `<strong>${assignment.label}</strong>.` +
+    `For <strong>${pos.shortName}</strong> on "${callHtml}":  ` +
+    `<strong>${assignment.label}</strong>` +
     `<ul class="feedback-details"><li>${lineup}</li></ul>`
   )
 }

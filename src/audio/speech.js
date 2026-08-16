@@ -6,11 +6,11 @@ let preferredVoice = null
 
 const DEFAULT_RATE = 0.78
 /** Slightly slower — calm sideline cadence for play calls */
-const PLAY_CALL_RATE = 0.68
+const PLAY_CALL_RATE = 0.58
 const FEEDBACK_RATE = 0.82
-const DEFAULT_PITCH = 1.05
-/** A touch lower reads warmer / less “chipper” on play calls */
-const PLAY_CALL_PITCH = 0.98
+const DEFAULT_PITCH = 1.0
+/** Deeper pitch for a more masculine play-call voice */
+const PLAY_CALL_PITCH = 0.72
 
 export function isSpeechSupported() {
   return 'speechSynthesis' in window
@@ -68,9 +68,11 @@ function scoreVoice(voice) {
   }
   // Prefer male for Coach B / Hear the Call
   if (/male|man|\(male\)|aaron|alex|tom|nathan|evan|matthew|guy|davis|tony|justin|joey|noah|bruce|gordon|lee|rocko|reed|eddy/i.test(name) && !/female|woman/i.test(name)) {
-    score += 35
+    score += 50
   }
-  if (/female|woman|\(female\)/i.test(name)) score -= 15
+  if (/female|woman|\(female\)|samantha|nicky|ava|allison|susan|zoe|kathy|stephanie|jenny|aria|sara|michelle|grandma/i.test(name)) {
+    score -= 40
+  }
   if (voice.localService) score += 5
 
   return score

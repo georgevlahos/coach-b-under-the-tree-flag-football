@@ -199,3 +199,91 @@ export function speakableCall(call) {
 export function assignmentFor(parsed, positionId) {
   return parsed.assignments[positionId]
 }
+
+const MOTION_BY_POS = {
+  H: 'Hazer',
+  L: 'Lazer',
+  R: 'Razer',
+  X: 'Xavier',
+  Z: 'Zazer',
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function wrapCallRange(call, start, end) {
+  return (
+    escapeHtml(call.slice(0, start)) +
+    `<span class="play-call-pos-cue">${escapeHtml(call.slice(start, end))}</span>` +
+    escapeHtml(call.slice(end))
+  )
+}
+
+/**
+ * Highlight the part of a play call that assigns a position (tag or formation digit).
+ * @param {string} call
+ * @param {string} positionId
+ * @param {string} [formationId]
+ * @returns {string} HTML-safe call with cue wrapped in .play-call-pos-cue
+ */
+export function highlightCallForPosition(call, positionId, formationId) {
+  const pos = String(positionId || '').toUpperCase()
+  if (!call || !pos) return escapeHtml(call || '')
+
+  /** @type {RegExp[]} */
+  const patterns = []
+  const motionName = MOTION_BY_POS[pos]
+  if (motionName) {
+    patterns.push(new RegExp(`\\b${motionName}\\s+(?:Left|Right)\\s*-?\\s*\\d\\b`, 'i'))
+  }
+  if (pos === 'H') {
+    patterns.push(/\bH\s*-?\s*fake\s+run\s+(?:left|right)\b/i)
+  }
+  patterns.push(new RegExp(`\\b${pos}\\s*-?\\s*(?:Fake\\s+Reverse|Reverse)\\b`, 'i'))
+  patterns.push(new RegExp(`\\b${pos}(?:-${pos}){2}\\s+\\d\\b`, 'i'))
+  patterns.push(new RegExp(`\\b${pos}\\s*-?\\s*\\d\\b`, 'i'))
+
+  for (const re of patterns) {
+    const m = call.match(re)
+    if (m?.index != null) {
+      return wrapCallRange(call, m.index, m.index + m[0].length)
+    }
+  }
+
+  const formId = formationId || (call.match(/^Trips Left\b/i) ? 'trips-left' : call.match(/^Trips Right\b/i) ? 'trips-right' : 'spread')
+
+  if (formId === 'spread') {
+    const m = call.match(/(\d)\s*-\s*(\d)/)
+    if (m?.index != null) {
+      if (pos === 'X' || pos === 'Z') {
+        return wrapCallRange(call, m.index, m.index + 1)
+      }
+      if (pos === 'L' || pos === 'R') {
+        const offset = m[0].lastIndexOf(m[2])
+        return wrapCallRange(call, m.index + offset, m.index + offset + 1)
+      }
+    }
+  } else {
+    const m = call.match(/\b(\d)(\d)(\d)\b/)
+    if (m?.index != null) {
+      let digit = -1
+      if (pos === 'X' || pos === 'Z') digit = 0
+      else if (formId === 'trips-left') {
+        if (pos === 'L') digit = 1
+        else if (pos === 'R') digit = 2
+      } else if (pos === 'R') digit = 1
+      else if (pos === 'L') digit = 2
+
+      if (digit >= 0) {
+        return wrapCallRange(call, m.index + digit, m.index + digit + 1)
+      }
+    }
+  }
+
+  return escapeHtml(call)
+}

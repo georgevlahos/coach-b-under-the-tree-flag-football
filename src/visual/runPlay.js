@@ -84,6 +84,7 @@ function mapSpotsToYardField(spots) {
  *   spots?: Record<string, { x: number, y: number }>,
  *   unlabeled?: boolean,
  *   showPlayers?: boolean,
+ *   mini?: boolean,
  * }} opts
  */
 export function createYardFieldSvg(opts) {
@@ -97,6 +98,7 @@ export function createYardFieldSvg(opts) {
     spots: spotsOverride = null,
     unlabeled = false,
     showPlayers = true,
+    mini = false,
   } = opts
 
   let spots = {}
@@ -108,22 +110,34 @@ export function createYardFieldSvg(opts) {
   }
 
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-  svg.setAttribute('viewBox', '0 0 100 100')
+  // Mini glance sheets: pad above the field for deep tips/arrowheads, and keep
+  // enough room below the LOS so flat routes (Arrow) and Wheel starts stay visible.
+  const miniTop = FIELD_TOP - 5
+  const miniBottom = LOS_Y + 20
+  const viewBox = mini
+    ? `0 ${miniTop} 100 ${miniBottom - miniTop}`
+    : '0 0 100 100'
+  svg.setAttribute('viewBox', viewBox)
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
   svg.setAttribute('class', `field-svg field-svg--run ${className}`.trim())
   svg.setAttribute('aria-label', ariaLabel)
   svg.dataset.markerId = markerId
   if (formationId) svg.dataset.formationId = formationId
+  if (mini) svg.dataset.mini = '1'
+
+  const tipW = mini ? '2.6' : '3.5'
+  const tipH = mini ? '2.6' : '3.5'
 
   svg.innerHTML = `
     <defs>
       <marker id="${markerId}" viewBox="0 0 10 10" refX="8" refY="5"
-        markerWidth="3.5" markerHeight="3.5" orient="auto-start-reverse">
+        markerWidth="${tipW}" markerHeight="${tipH}" orient="auto-start-reverse">
         <path d="M 0 0 L 10 5 L 0 10 z" fill="#fdcb6e"/>
       </marker>
     </defs>
     <rect x="${FIELD_LEFT}" y="${FIELD_TOP}" width="${FIELD_RIGHT - FIELD_LEFT}"
       height="${FIELD_HEIGHT}" fill="#386641" rx="1"/>
-    ${yardGrid()}
+    ${yardGrid({ mini })}
     <line x1="${FIELD_LEFT}" y1="${LOS_Y}" x2="${FIELD_RIGHT}" y2="${LOS_Y}"
       stroke="#f0ebe3" stroke-width="0.5" stroke-dasharray="2.2,1.1"/>
     ${includeRouteLayer ? '<g class="run-routes"></g>' : ''}
@@ -171,11 +185,11 @@ export function mountRunPlayField(container, play) {
 
 /**
  * Learn / quiz route diagram: unlabeled receiver circle(s) + route path(s)
- * on the shared 30-yard field. Vertical uses one circle; other routes show
- * left and right so both breaks are clear.
+ * on the shared 30-yard field. Vertical and Hitch use one center circle;
+ * other routes show left and right so both breaks are clear.
  * @param {HTMLElement} container
  * @param {import('../data/routes.js').Route} route
- * @param {{ className?: string, animate?: boolean }} [opts]
+ * @param {{ className?: string, animate?: boolean, mini?: boolean }} [opts]
  */
 export function mountLearnRouteField(container, route, opts = {}) {
   container.innerHTML = ''
@@ -187,7 +201,8 @@ export function mountLearnRouteField(container, route, opts = {}) {
     Object.fromEntries(sides.map((s) => [s.id, { x: s.x, y: s.y }])),
   )
 
-  const markerId = `learn-route-${route.id}`
+  const mini = Boolean(opts.mini)
+  const markerId = `learn-route-${route.id}${mini ? '-mini' : ''}`
   const svg = createYardFieldSvg({
     markerId,
     className: opts.className || '',
@@ -195,9 +210,13 @@ export function mountLearnRouteField(container, route, opts = {}) {
     includeRouteLayer: true,
     spots,
     unlabeled: true,
+    mini,
   })
   container.appendChild(svg)
-  paintLearnRoutePaths(svg, route, spots, { animate: opts.animate !== false })
+  paintLearnRoutePaths(svg, route, spots, {
+    animate: opts.animate !== false,
+    mini,
+  })
   return svg
 }
 
@@ -207,7 +226,8 @@ export function mountLearnRouteField(container, route, opts = {}) {
  * @param {import('../data/routes.js').Route} route
  */
 function learnRouteStartSpots(route) {
-  if (route.number === 0) return [{ id: 'A', x: 50, y: 68 }]
+  // Center-only: Vertical (0) and Hitch (1)
+  if (route.number === 0 || route.number === 1) return [{ id: 'A', x: 50, y: 68 }]
 
   let leftX = 28
   let rightX = 72
@@ -227,7 +247,7 @@ function learnRouteStartSpots(route) {
  * @param {SVGSVGElement} svg
  * @param {import('../data/routes.js').Route} route
  * @param {Record<string, { x: number, y: number }>} spots
- * @param {{ animate?: boolean }} [opts]
+ * @param {{ animate?: boolean, mini?: boolean }} [opts]
  */
 function paintLearnRoutePaths(svg, route, spots, opts = {}) {
   const layer = svg.querySelector('.run-routes')
@@ -238,6 +258,7 @@ function paintLearnRoutePaths(svg, route, spots, opts = {}) {
   const defs = svg.querySelector('defs')
   const color = '#eb6d20'
   const paths = []
+  const tipSize = opts.mini ? '2.6' : '3.5'
 
   for (const [id, spot] of Object.entries(spots)) {
     const tipId = `${markerId}-${id}`
@@ -247,8 +268,8 @@ function paintLearnRoutePaths(svg, route, spots, opts = {}) {
       marker.setAttribute('viewBox', '0 0 10 10')
       marker.setAttribute('refX', '8')
       marker.setAttribute('refY', '5')
-      marker.setAttribute('markerWidth', '3.5')
-      marker.setAttribute('markerHeight', '3.5')
+      marker.setAttribute('markerWidth', tipSize)
+      marker.setAttribute('markerHeight', tipSize)
       marker.setAttribute('orient', 'auto-start-reverse')
       const tip = document.createElementNS('http://www.w3.org/2000/svg', 'path')
       tip.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z')
@@ -267,7 +288,7 @@ function paintLearnRoutePaths(svg, route, spots, opts = {}) {
     el.setAttribute('d', d)
     el.setAttribute('fill', 'none')
     el.setAttribute('stroke', color)
-    el.setAttribute('stroke-width', '1.15')
+    el.setAttribute('stroke-width', opts.mini ? '1.35' : '1.15')
     el.setAttribute('stroke-linecap', 'round')
     el.setAttribute('stroke-linejoin', 'round')
     el.setAttribute('marker-end', `url(#${tipId})`)
@@ -511,7 +532,8 @@ function clampPointsToField(pts) {
 }
 
 /** Thin lines every 5 yards, thicker every 10; small yard numbers on the sidelines */
-function yardGrid() {
+function yardGrid(opts = {}) {
+  const mini = Boolean(opts.mini)
   let out = ''
 
   // Hash marks / depth lines
@@ -530,16 +552,18 @@ function yardGrid() {
       stroke="#fff" stroke-width="0.1" opacity="0.12"/>`
   }
 
-  // Small yard markers (yards from bottom of this 30-yard field)
-  for (let yd = 5; yd <= FIELD_YARDS - 5; yd += 5) {
-    const y = yardToY(yd)
-    const label = String(yd)
-    const weight = yd % 10 === 0 ? 700 : 500
-    const size = yd % 10 === 0 ? 2.1 : 1.7
-    out += `<text x="${FIELD_LEFT + 2.2}" y="${y + 0.7}" fill="#fff" font-size="${size}"
-      font-weight="${weight}" opacity="0.7">${label}</text>`
-    out += `<text x="${FIELD_RIGHT - 2.2}" y="${y + 0.7}" text-anchor="end" fill="#fff"
-      font-size="${size}" font-weight="${weight}" opacity="0.7">${label}</text>`
+  // Skip yard numbers on mini sheets — too noisy at glance size
+  if (!mini) {
+    for (let yd = 5; yd <= FIELD_YARDS - 5; yd += 5) {
+      const y = yardToY(yd)
+      const label = String(yd)
+      const weight = yd % 10 === 0 ? 700 : 500
+      const size = yd % 10 === 0 ? 2.1 : 1.7
+      out += `<text x="${FIELD_LEFT + 2.2}" y="${y + 0.7}" fill="#fff" font-size="${size}"
+        font-weight="${weight}" opacity="0.7">${label}</text>`
+      out += `<text x="${FIELD_RIGHT - 2.2}" y="${y + 0.7}" text-anchor="end" fill="#fff"
+        font-size="${size}" font-weight="${weight}" opacity="0.7">${label}</text>`
+    }
   }
 
   return out
@@ -586,6 +610,20 @@ function scaleToDepth(rel, routeOrDepth) {
   if (maxUp < YARD * 1.2 && maxLat > 0.5) {
     const scale = (6 * YARD) / maxLat
     return rel.map((p) => ({ dx: p.dx * scale, dy: p.dy * scale }))
+  }
+
+  // Post / Corner: depthYards is the stem-to-break (45° turn), not the tip
+  if (
+    route &&
+    (route.name === 'Post' || route.name === 'Corner') &&
+    route.depthYards != null &&
+    rel.length >= 3
+  ) {
+    const stemUp = Math.max(-rel[1].dy, 0)
+    if (stemUp > 0.5) {
+      const scale = (route.depthYards * YARD) / stemUp
+      return rel.map((p) => ({ dx: p.dx * scale, dy: p.dy * scale }))
+    }
   }
 
   const scaleY = maxUp > 0.5 ? targetUp / maxUp : 1

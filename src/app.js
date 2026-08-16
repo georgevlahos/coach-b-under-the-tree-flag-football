@@ -18,8 +18,8 @@ import {
   animateRunPlay,
   mountLearnRouteField,
 } from './visual/runPlay.js'
+import { mountPlayCallMovie } from './learn/playCallMovie.js'
 import {
-  isSpeechSupported,
   isAudioModeEnabled,
   setAudioMode,
   speakPlayCall,
@@ -27,11 +27,15 @@ import {
 
 /** @type {'home' | 'learn' | 'quiz' | 'progress'} */
 let currentPage = 'home'
-let learnTab = 'routes'
+let learnTab = 'how-calls'
+/** @type {{ destroy: () => void } | null} */
+let playCallMovie = null
 /** @type {QuizSession | null} */
 let activeSession = null
 /** Show "You are the …" splash before play-call quiz questions */
 let showYouAreIntro = false
+/** Show mini route sheet before Rookie routes quiz */
+let showRouteReview = false
 let quizCategory = 'routes'
 let quizCueMode = 'both'
 let quizCount = 5
@@ -47,10 +51,15 @@ export function initApp() {
 }
 
 function render() {
+  playCallMovie?.destroy()
+  playCallMovie = null
+
   const quizFit = currentPage === 'quiz'
+  // Full brand on the quiz picker; compact only while a quiz session is active
+  const headerCompact = quizFit && Boolean(activeSession)
   app.innerHTML = `
     <div class="app-shell ${quizFit ? 'quiz-fit' : ''}">
-      ${renderHeader(quizFit)}
+      ${renderHeader(headerCompact)}
       <main class="main-content ${quizFit ? 'main-content--quiz' : ''}">${renderPage()}</main>
       ${renderNav()}
     </div>
@@ -59,7 +68,6 @@ function render() {
 }
 
 function renderHeader(compact = false) {
-  const audioOn = isAudioModeEnabled()
   return `
     <header class="site-header ${compact ? 'site-header--compact' : ''}">
       <div class="header-brand">
@@ -68,12 +76,6 @@ function renderHeader(compact = false) {
           <h1 class="site-title">Coach B</h1>
           ${compact ? '' : '<p class="site-subtitle">Under the Tree — Flag Football</p>'}
         </div>
-      </div>
-      <div class="header-stats">
-        ${isSpeechSupported() ? `
-          <button class="btn btn-icon ${audioOn ? 'active' : ''}" id="toggle-audio" title="Audio quiz mode">
-            ${audioOn ? '🔊' : '🔇'}
-          </button>` : ''}
       </div>
     </header>
   `
@@ -115,26 +117,26 @@ function renderHome() {
         Learn your routes and what to run when Coach calls a play.
       </p>
       <div class="hero-actions">
-        <button class="btn btn-primary btn-lg" data-action="go-learn">Learn about our Routes and Plays</button>
-        <button class="btn btn-secondary btn-lg" data-quiz-cat="routes">Test Me on Routes</button>
-        <button class="btn btn-secondary btn-lg" data-quiz-cat="play-calls">Test Me on Play Calls</button>
+        <button class="btn btn-primary btn-lg" data-action="go-learn"><span class="hero-cta-word">Learn</span>Routes, Play &amp; Play Calls</button>
+        <button class="btn btn-secondary btn-lg" data-action="go-quiz"><span class="hero-cta-word">Quiz Me</span>On Routes, Formations &amp; Play Calls</button>
       </div>
-    </section>
-    <section class="feature-banner">
-      <p>🔊 Toggle the speaker for audio play-call practice. You can also quiz with text-only cues.</p>
     </section>
   `
 }
 
 function renderLearn() {
   const tabs = [
+    { id: 'how-calls', label: 'How calls work' },
     { id: 'routes', label: 'Routes' },
     { id: 'formations', label: 'Formations' },
-    { id: 'plays', label: 'Play calls' },
+    { id: 'plays', label: 'Play Call Examples' },
   ]
   if (learnTab === 'positions') learnTab = 'routes'
-  const quizCat = learnTab === 'plays' ? 'play-calls' : learnTab
-  const quizLabel = learnTab === 'plays' ? 'play calls' : learnTab
+  const quizCat = learnTab === 'plays' || learnTab === 'how-calls' ? 'play-calls' : learnTab
+  const quizLabel =
+    learnTab === 'plays' || learnTab === 'how-calls'
+      ? 'play calls'
+      : learnTab
   return `
     <section class="learn-page">
       <div class="learn-tabs">
@@ -150,6 +152,8 @@ function renderLearn() {
 
 function renderLearnTab() {
   switch (learnTab) {
+    case 'how-calls':
+      return `<div class="pcm-host" id="pcm-host"></div>`
     case 'formations':
       return formations.map((f) => `
         <article class="learn-card">
@@ -160,7 +164,17 @@ function renderLearnTab() {
         </article>
       `).join('')
     case 'routes':
-      return routes.map((r) => `
+      return `
+        <div class="route-review route-review--learn" aria-label="Routes at a glance">
+          <h2 class="route-review-title">Routes at a glance</h2>
+          ${routeReviewGridHtml()}
+        </div>
+        <div class="learn-routes-divider" role="separator" aria-hidden="true">
+          <span>Learn each route</span>
+        </div>
+        ${routes
+          .map(
+            (r) => `
         <article class="learn-card">
           <div class="learn-card-header">
             <h3>${formatRoute(r)}</h3>
@@ -168,8 +182,10 @@ function renderLearnTab() {
           </div>
           <div class="learn-field learn-field--run" data-learn-route="${r.id}"></div>
           <p>${r.description}</p>
-        </article>
-      `).join('')
+        </article>`,
+          )
+          .join('')}
+      `
     case 'plays':
       return getRunnablePlays(plays).map((play) => `
         <article class="learn-card learn-card--play" data-play-card="${play.id}">
@@ -298,11 +314,6 @@ function renderProgressPage() {
 function bindEvents() {
   injectFieldDefs(app)
 
-  app.querySelector('#toggle-audio')?.addEventListener('click', () => {
-    setAudioMode(!isAudioModeEnabled())
-    render()
-  })
-
   app.querySelectorAll('[data-page]').forEach((btn) => {
     btn.addEventListener('click', () => {
       currentPage = btn.dataset.page
@@ -313,6 +324,12 @@ function bindEvents() {
 
   app.querySelector('[data-action="go-learn"]')?.addEventListener('click', () => {
     currentPage = 'learn'
+    render()
+  })
+
+  app.querySelector('[data-action="go-quiz"]')?.addEventListener('click', () => {
+    currentPage = 'quiz'
+    activeSession = null
     render()
   })
 
@@ -336,6 +353,13 @@ function bindEvents() {
       render()
     })
   })
+
+  const pcmHost = app.querySelector('#pcm-host')
+  if (pcmHost) {
+    playCallMovie = mountPlayCallMovie(pcmHost)
+  }
+
+  mountRouteReviewFields(app)
 
   app.querySelectorAll('.learn-field').forEach((el) => {
     if (el.dataset.runPlay) {
@@ -440,7 +464,9 @@ function bindEvents() {
         app.classList.remove('cue-audio-focus')
       }
 
-      if (showYouAreIntro && activeSession.category === 'play-calls') {
+      if (showRouteReview && activeSession.category === 'routes') {
+        renderRouteReview(container)
+      } else if (showYouAreIntro && activeSession.category === 'play-calls') {
         renderYouAreIntro(container, activeSession.positionId)
       } else {
         renderQuiz(container, activeSession, (action) => {
@@ -448,6 +474,7 @@ function bindEvents() {
           else {
             activeSession = null
             showYouAreIntro = false
+            showRouteReview = false
             currentPage = 'quiz'
             render()
           }
@@ -455,6 +482,73 @@ function bindEvents() {
       }
     }
   }
+}
+
+/**
+ * Shared 2×5 mini route grid markup (numbers 0–9).
+ * @returns {string}
+ */
+function routeReviewGridHtml() {
+  // Tree order: 1–9, then 0 last (bottom-right in the 2×5 glance grid)
+  const ordered = [...routes].sort((a, b) => {
+    const aKey = a.number === 0 ? 10 : a.number
+    const bKey = b.number === 0 ? 10 : b.number
+    return aKey - bKey
+  })
+  return `
+    <div class="route-review-grid">
+      ${ordered
+        .map(
+          (r) => `
+        <div class="route-review-cell">
+          <div class="route-review-field" data-review-route="${r.id}"></div>
+          <p class="route-review-label"><span class="route-review-num">${r.number}</span> ${r.name}</p>
+        </div>`,
+        )
+        .join('')}
+    </div>
+  `
+}
+
+/**
+ * Mount mini diagrams into any `[data-review-route]` fields under `root`.
+ * @param {ParentNode} root
+ */
+function mountRouteReviewFields(root) {
+  root.querySelectorAll('[data-review-route]').forEach((el) => {
+    const route = getRouteById(/** @type {HTMLElement} */ (el).dataset.reviewRoute)
+    if (route) {
+      mountLearnRouteField(/** @type {HTMLElement} */ (el), route, {
+        animate: false,
+        className: 'field-svg--mini-route',
+        mini: true,
+      })
+    }
+  })
+}
+
+/**
+ * Mini 2×5 route sheet before Rookie routes quiz — no scrolling.
+ * @param {HTMLElement} container
+ */
+function renderRouteReview(container) {
+  container.innerHTML = `
+    <div class="route-review" role="dialog" aria-modal="true" aria-labelledby="route-review-heading">
+      <h2 class="route-review-title" id="route-review-heading">Routes at a glance</h2>
+      ${routeReviewGridHtml()}
+      <div class="route-review-footer">
+        <p class="route-review-ready">Are you ready? Click OK and we'll start the quiz!</p>
+        <button type="button" class="btn btn-primary" id="route-review-ok">OK</button>
+      </div>
+    </div>
+  `
+
+  mountRouteReviewFields(container)
+
+  container.querySelector('#route-review-ok')?.addEventListener('click', () => {
+    showRouteReview = false
+    render()
+  })
 }
 
 /**
@@ -490,6 +584,7 @@ function startQuiz(category, count) {
     difficultyId: quizDifficulty,
   })
   showYouAreIntro = category === 'play-calls'
+  showRouteReview = category === 'routes' && quizDifficulty === 'rookie'
   currentPage = 'quiz'
   render()
 }

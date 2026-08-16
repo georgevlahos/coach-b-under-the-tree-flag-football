@@ -190,10 +190,26 @@ body {
   background: var(--bg-elevated);
 }
 
+.btn-navy {
+  background: linear-gradient(135deg, var(--navy-soft), var(--navy));
+  color: #fff;
+  padding: 0.85rem 1.6rem;
+  font-size: 1rem;
+  border: none;
+  box-shadow: 0 10px 22px rgba(13, 17, 103, 0.28);
+}
+
+.btn-navy:hover:not(:disabled) {
+  box-shadow: 0 12px 28px rgba(13, 17, 103, 0.36);
+  transform: translateY(-1px);
+  color: #fff;
+}
+
 .btn-lg {
   padding: 1.05rem 2rem;
   font-size: 1.08rem;
   width: 100%;
+  line-height: 1.25;
 }
 
 .btn-sm {
@@ -352,6 +368,27 @@ body {
   flex-direction: column;
   gap: 0.75rem;
   margin: 1.35rem 0 0.85rem;
+}
+
+.hero-actions .btn-primary {
+  flex-direction: column;
+  gap: 0.2rem;
+  line-height: 1.25;
+}
+
+.hero-actions .btn-secondary {
+  flex-direction: column;
+  gap: 0.2rem;
+  line-height: 1.25;
+}
+
+.hero-cta-word {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.55em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
 }
 
 .home-cards {
@@ -1630,7 +1667,7 @@ body:has(.quiz-fit) #app {
 
 .quiz-card--play-calls .feedback-details,
 .quiz-card--formations .feedback-details {
-  margin: 0.15rem 0 0 0.9rem;
+  margin: 0.35rem 0 0 0.9rem;
 }
 
 .quiz-card--play-calls .quiz-actions,
@@ -1737,6 +1774,183 @@ body:has(.quiz-fit) #app {
   margin-right: 0.08em;
 }
 
+/* Rookie routes quiz — mini route sheet (2×5, no scroll) */
+.route-review {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.25rem 0.35rem 0.15rem;
+  overflow: hidden;
+}
+
+.route-review-title {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--navy);
+  text-align: center;
+  margin: 0;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+
+.route-review-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  gap: 0.28rem 0.4rem;
+}
+
+.route-review-field {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #386641;
+  border-radius: 0.35rem;
+}
+
+.route-review-field .field-svg,
+.field-svg--mini-route {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  /* Override .field-svg--run min-height: 220px — that overflows glance cells and clips Arrow/Wheel */
+  min-height: 0;
+  display: block;
+  border-radius: 0.35rem;
+  overflow: hidden;
+  background: #386641;
+}
+
+.route-review--learn {
+  flex: none;
+  height: min(62dvh, 34rem);
+  margin-bottom: 0.35rem;
+  padding: 0.55rem 0.45rem 0.45rem;
+  background: var(--bg-card);
+  border: 1px solid rgba(13, 17, 103, 0.08);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.route-review--learn .route-review-grid {
+  /* Ensure each glance row has enough vertical room for LOS + flat routes */
+  grid-template-rows: repeat(5, minmax(4.75rem, 1fr));
+}
+
+.route-review-cell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid rgba(13, 17, 103, 0.08);
+  border-radius: 0.55rem;
+  padding: 0.2rem 0.25rem 0.12rem;
+  overflow: hidden;
+}
+
+.route-review-label {
+  flex-shrink: 0;
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.15;
+  margin: 0.08rem 0 0;
+  padding: 0.1rem 0.15rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: #fff;
+}
+
+.route-review-num {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--orange);
+  margin-right: 0.15rem;
+}
+
+.route-review-footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.25rem 0.25rem;
+}
+
+.route-review-ready {
+  margin: 0;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  line-height: 1.3;
+  max-width: 22rem;
+}
+
+.route-review-footer .btn {
+  padding: 0.55rem 1.75rem;
+  font-size: 0.95rem;
+}
+
+.quiz-fit .route-review-title {
+  font-size: 0.88rem;
+}
+
+.learn-routes-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.15rem 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.learn-routes-divider::before,
+.learn-routes-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(13, 17, 103, 0.18),
+    transparent
+  );
+}
+
+.learn-routes-divider span {
+  flex-shrink: 0;
+}
+
+@media (min-width: 480px) {
+  .route-review-label {
+    font-size: 0.78rem;
+  }
+
+  .route-review-ready {
+    font-size: 0.88rem;
+  }
+
+  .route-review--learn {
+    height: min(58dvh, 36rem);
+  }
+}
+
 .run-route-path {
   opacity: 0;
   pointer-events: none;
@@ -1758,6 +1972,12 @@ body:has(.quiz-fit) #app {
   margin-top: 0.35rem;
   font-weight: 800;
   color: var(--navy);
+}
+
+/* Highlight where the learner's position shows up in the play call */
+.play-call-pos-cue {
+  font-weight: 800;
+  color: var(--orange);
 }
 
 .learn-muted {
@@ -1835,4 +2055,451 @@ body:has(.quiz-fit) #app {
 /* Quiz fit: keep nav readable inside flex layout */
 .quiz-fit .app-shell {
   padding-bottom: 0;
+}
+
+/* Play-call breakdown movie */
+.pcm-host {
+  max-width: 40rem;
+  margin: 0 auto 1rem;
+}
+
+.pcm-hub-lead {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  font-weight: 500;
+  margin: 0 0 0.85rem;
+  line-height: 1.4;
+}
+
+.pcm-hub-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--navy);
+  text-align: center;
+  margin: 0.85rem 0 0.65rem;
+  letter-spacing: -0.02em;
+}
+
+.pcm-movie-picker {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+@media (min-width: 520px) {
+  .pcm-movie-picker {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.pcm-movie-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  text-align: left;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(13, 17, 103, 0.1);
+  background: #fff;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.pcm-movie-pick:hover {
+  border-color: rgba(235, 109, 32, 0.45);
+  box-shadow: var(--shadow-sm);
+}
+
+.pcm-movie-pick.active {
+  border-color: var(--orange);
+  background: rgba(235, 109, 32, 0.08);
+  box-shadow: 0 0 0 1px var(--orange);
+}
+
+.pcm-movie-pick-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--navy);
+}
+
+.pcm-movie-pick-sub {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.pcm {
+  background: var(--bg-card);
+  border: 1px solid rgba(13, 17, 103, 0.08);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.pcm-stage {
+  padding: 1.1rem 1.15rem 0.85rem;
+  min-height: 22rem;
+  background:
+    linear-gradient(160deg, rgba(13, 17, 103, 0.04), transparent 45%),
+    linear-gradient(180deg, #fff, var(--bg-elevated));
+}
+
+.pcm-progress {
+  display: flex;
+  gap: 0.28rem;
+  margin-bottom: 0.85rem;
+}
+
+.pcm-tick {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(13, 17, 103, 0.12);
+  transition: background 0.25s;
+}
+
+.pcm-tick.is-done {
+  background: rgba(235, 109, 32, 0.45);
+}
+
+.pcm-tick.is-active {
+  background: var(--orange);
+}
+
+.pcm-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--navy);
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+.pcm-field {
+  margin: 0 0 0.75rem;
+}
+
+.pcm-field .field-svg,
+.pcm-field-svg {
+  width: 100%;
+  max-height: 12.35rem;
+  display: block;
+}
+
+.pcm-body {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.pcm-body--in {
+  opacity: 1;
+  transform: none;
+}
+
+.pcm-lead {
+  color: var(--text-muted);
+  font-size: 0.98rem;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+/* Formula / number-slot graphic */
+.pcm-formula {
+  margin: 0.35rem 0 0.85rem;
+}
+
+.pcm-formula-name {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--navy);
+  margin-bottom: 0.55rem;
+}
+
+.pcm-formula-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+.pcm-bucket {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.15rem;
+  min-width: 4.6rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.65rem;
+  border: 2px dashed rgba(13, 17, 103, 0.22);
+  background: rgba(255, 255, 255, 0.85);
+  opacity: 0.48;
+  transition: opacity 0.2s, border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.pcm-bucket.is-on {
+  opacity: 1;
+  box-shadow: 0 4px 14px rgba(13, 17, 103, 0.08);
+}
+
+.pcm-bucket-label {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.78rem;
+  line-height: 1.15;
+  color: var(--navy);
+}
+
+.pcm-bucket-hint {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.pcm-bucket--formation.is-on {
+  border-style: solid;
+  border-color: var(--navy);
+  background: rgba(13, 17, 103, 0.08);
+}
+
+.pcm-bucket--num {
+  min-width: 5.2rem;
+  border-style: dashed;
+  border-width: 2px;
+}
+
+.pcm-bucket--num.is-on {
+  border-style: solid;
+  border-color: var(--orange);
+  background: rgba(235, 109, 32, 0.12);
+}
+
+.pcm-bucket--num.is-on .pcm-bucket-label {
+  color: #9a4a12;
+}
+
+.pcm-bucket--h {
+  min-width: 3.6rem;
+  max-width: 4.6rem;
+}
+
+.pcm-bucket--h .pcm-bucket-hint {
+  line-height: 1.2;
+}
+
+.pcm-bucket--h.is-on {
+  border-style: solid;
+  border-color: var(--success);
+  background: rgba(42, 157, 143, 0.12);
+}
+
+.pcm-bucket--tag {
+  border-style: dotted;
+}
+
+.pcm-bucket--tag.is-on {
+  border-style: solid;
+  border-color: #5c6178;
+  background: rgba(92, 97, 120, 0.1);
+}
+
+.pcm-bucket--optional .pcm-bucket-hint {
+  font-style: italic;
+  font-weight: 600;
+}
+
+.pcm-plus {
+  align-self: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  padding: 0 0.1rem;
+}
+
+.pcm-formula-tip {
+  margin-top: 0.65rem;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.pcm-example {
+  margin: 0.55rem 0 0.25rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.pcm-hl {
+  color: var(--orange);
+  font-weight: 800;
+}
+
+.pcm-call {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--navy);
+  line-height: 1.45;
+  margin: 0.35rem 0 0.85rem;
+  letter-spacing: -0.01em;
+}
+
+.pcm-call--xl {
+  font-size: 1.35rem;
+  text-align: center;
+}
+
+.pcm-part {
+  display: inline;
+  padding: 0.08em 0.2em;
+  border-radius: 0.3em;
+  color: var(--text-muted);
+  opacity: 0.55;
+  transition: color 0.25s, background 0.25s, opacity 0.25s;
+}
+
+.pcm-part.is-on {
+  opacity: 1;
+  font-weight: 800;
+}
+
+.pcm-part--formation.is-on {
+  color: var(--navy);
+  background: rgba(13, 17, 103, 0.1);
+}
+
+.pcm-part--routes.is-on {
+  color: #9a4a12;
+  background: rgba(235, 109, 32, 0.16);
+}
+
+.pcm-part--tags.is-on {
+  color: #1a6b62;
+  background: rgba(42, 157, 143, 0.16);
+}
+
+.pcm-comma {
+  color: var(--text-muted);
+  margin-right: 0.15em;
+}
+
+.pcm-map {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.pcm-map-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.65rem;
+  background: #fff;
+  border: 1px solid rgba(13, 17, 103, 0.08);
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+}
+
+.pcm-digit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.1rem;
+  height: 1.75rem;
+  padding: 0 0.45rem;
+  border-radius: 0.45rem;
+  background: linear-gradient(135deg, var(--orange-soft), var(--orange));
+  color: #fff;
+  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.pcm-assign {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.55rem 0 0.65rem;
+}
+
+.pcm-assign > span {
+  padding: 0.35rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: rgba(13, 17, 103, 0.06);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.pcm-assign--hit {
+  background: rgba(235, 109, 32, 0.18) !important;
+  color: #9a4a12;
+  box-shadow: 0 0 0 1px rgba(235, 109, 32, 0.35);
+}
+
+.pcm-steps {
+  margin: 0.35rem 0 0.75rem 1.1rem;
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.pcm-steps li {
+  margin: 0.35rem 0;
+}
+
+.pcm-bullets {
+  margin: 0.4rem 0 0.6rem 1.1rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.pcm-bullets li {
+  margin: 0.3rem 0;
+}
+
+.pcm-note {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  margin-top: 0.35rem;
+}
+
+.pcm-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: center;
+  padding: 0.75rem 1rem 0.35rem;
+  border-top: 1px solid rgba(13, 17, 103, 0.06);
+  background: #fff;
+}
+
+.pcm-counter {
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 0 1rem 0.85rem;
+  background: #fff;
+}
+
+@media (min-width: 720px) {
+  .pcm-stage {
+    min-height: 24rem;
+  }
+
+  .pcm-field .field-svg,
+  .pcm-field-svg {
+    max-height: 14.3rem;
+  }
 }

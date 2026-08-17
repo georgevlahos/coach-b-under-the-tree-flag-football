@@ -92,7 +92,7 @@ Receivers need to know these cold. See also `positions.md` (who runs them) and `
 **Depth:** deep
 
 **Details:**
-- 5 yards, then deep middle
+- 8 yards up, then deep middle
 
 ### 9 — Corner
 
@@ -101,7 +101,7 @@ Receivers need to know these cold. See also `positions.md` (who runs them) and `
 **Depth:** deep
 
 **Details:**
-- 5 yards, then deep towards the corner
+- 8 yards up, then deep towards the corner
 
 ### 0 — Vertical
 

@@ -122,10 +122,10 @@ export const routes = [
     number: 8,
     name: 'Post',
     depth: 'deep',
-    depthYards: 7,
-    description: '5 yards up, then deep toward the middle.',
+    depthYards: 8,
+    description: '8 yards up, then deep toward the middle.',
     image: '/routes/route-8-post.jpeg',
-    // Straight stem to ~7 yd (17-yard marker), then ~45° break toward the post
+    // Straight stem to 8 yd, then ~45° break toward the post
     path: [
       { x: 50, y: 68 },
       { x: 50, y: 48 },
@@ -137,10 +137,10 @@ export const routes = [
     number: 9,
     name: 'Corner',
     depth: 'deep',
-    depthYards: 7,
-    description: '5 yards up, then deep toward the corner.',
+    depthYards: 8,
+    description: '8 yards up, then deep toward the corner.',
     image: '/routes/route-9-corner.jpeg',
-    // Straight stem to ~7 yd (17-yard marker), then ~45° break toward the sideline
+    // Straight stem to 8 yd, then ~45° break toward the sideline
     path: [
       { x: 50, y: 68 },
       { x: 50, y: 48 },

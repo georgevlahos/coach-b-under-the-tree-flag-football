@@ -199,9 +199,11 @@ function renderLearnTab() {
             </p>
             <p class="route-tip-line route-tip-line--even">
               <strong>Routes 2, 4, 6, 8 Evens In</strong> towards the center of the field
+              <span class="route-tip-mnemonic">(think &ldquo;Ev-en, en sounds like In&rdquo;)</span>
             </p>
             <p class="route-tip-line route-tip-line--odd">
               <strong>Routes 3, 5, 7, 9 Odds Out</strong> towards the sideline
+              <span class="route-tip-mnemonic">(think &ldquo;Odd Man Out&rdquo;)</span>
             </p>
           </div>
           ${routeReviewGridHtml()}

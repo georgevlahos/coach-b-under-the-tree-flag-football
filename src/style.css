@@ -1924,6 +1924,13 @@ body:has(.quiz-fit) #app {
   font-weight: 800;
 }
 
+.route-tip-mnemonic {
+  display: inline;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
 .route-tip-line--straight strong {
   color: #0d1167;
 }

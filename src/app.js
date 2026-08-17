@@ -203,7 +203,7 @@ function renderLearnTab() {
             </p>
             <p class="route-tip-line route-tip-line--odd">
               <strong>Routes 3, 5, 7, 9 Odds Out</strong> towards the sideline
-              <span class="route-tip-mnemonic">(think &ldquo;Odd Man Out&rdquo;)</span>
+              <span class="route-tip-mnemonic">(think &ldquo;Odd &amp; Out start with O&rdquo;, or &ldquo;Odd Man Out&rdquo;)</span>
             </p>
           </div>
           ${routeReviewGridHtml()}

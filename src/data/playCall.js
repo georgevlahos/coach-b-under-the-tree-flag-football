@@ -183,7 +183,8 @@ function titleCaseFormation(s) {
 
 /** Spoken forms for position IDs — avoids TTS saying "capital R" etc. */
 const POSITION_LETTER_SAY = {
-  H: 'Aitch',
+  // Keep H as H (Aitch/Halfback were harder to hear on iPhone)
+  H: 'H',
   L: 'El',
   R: 'Are',
   X: 'Ex',
@@ -215,6 +216,9 @@ export function speakableCall(call) {
     .replace(/(?:\s*\.\.\.\s*)+/g, ' ... ')
     // Position letters as their own slot — phonetic so voices don't say "capital …"
     .replace(/\b([HLRXZ])\b/gi, (_, ch) => POSITION_LETTER_SAY[ch.toUpperCase()] || ch)
+    // Older audio strings may still say "Aitch" / "Halfback"
+    .replace(/\bAitch\b/gi, 'H')
+    .replace(/\bHalfback\b/gi, 'H')
     .trim()
 }
 

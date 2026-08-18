@@ -268,7 +268,11 @@ export function speakQuestion(question) {
 
 /** Speak Coach B's play call — accepts a play object or raw string */
 export function speakPlayCall(playOrText, opts = {}) {
-  const raw = typeof playOrText === 'string' ? playOrText : playOrText?.audioCall
+  // Prefer original call text so speakable forms stay up to date
+  const raw =
+    typeof playOrText === 'string'
+      ? playOrText
+      : playOrText?.call || playOrText?.audioCall
   if (!raw) return Promise.resolve()
   // Always normalize so position letters never say "capital R" etc.
   return speakPlayCallText(speakableCall(raw), { force: true, ...opts })

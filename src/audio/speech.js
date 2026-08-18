@@ -259,7 +259,7 @@ export function speakQuestion(question) {
   if (!text) return Promise.resolve()
   const profile = ratesForDevice()
   const isPlayCall = question.category === 'play-calls'
-  if (isPlayCall) return speakPlayCallText(speakableCall(text))
+  if (isPlayCall) return speakPlayCallText(speakableCall(text, { preferPlainH: isAppleMobile() }))
   return speak(text, {
     rate: profile.defaultRate,
     pitch: DEFAULT_PITCH,
@@ -275,7 +275,10 @@ export function speakPlayCall(playOrText, opts = {}) {
       : playOrText?.call || playOrText?.audioCall
   if (!raw) return Promise.resolve()
   // Always normalize so position letters never say "capital R" etc.
-  return speakPlayCallText(speakableCall(raw), { force: true, ...opts })
+  return speakPlayCallText(speakableCall(raw, { preferPlainH: isAppleMobile() }), {
+    force: true,
+    ...opts,
+  })
 }
 
 /** Replay a question's audio prompt (works even if audio mode is off) */
@@ -286,7 +289,9 @@ export function replayQuestionAudio(question) {
   if (!text) return Promise.resolve()
   const profile = ratesForDevice()
   const isPlayCall = question?.category === 'play-calls'
-  if (isPlayCall) return speakPlayCallText(speakableCall(text), { force: true })
+  if (isPlayCall) {
+    return speakPlayCallText(speakableCall(text, { preferPlainH: isAppleMobile() }), { force: true })
+  }
   return speak(text, {
     rate: profile.defaultRate,
     pitch: DEFAULT_PITCH,

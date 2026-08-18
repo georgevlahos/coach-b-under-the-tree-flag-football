@@ -183,16 +183,21 @@ function titleCaseFormation(s) {
 
 /** Spoken forms for position IDs — avoids TTS saying "capital R" etc. */
 const POSITION_LETTER_SAY = {
-  // Keep H as H (Aitch/Halfback were harder to hear on iPhone)
-  H: 'H',
   L: 'El',
   R: 'Are',
   X: 'Ex',
   Z: 'Zee',
 }
 
-/** Make TTS clearer with short pauses between formation, numbers, and tags */
-export function speakableCall(call) {
+/**
+ * Make TTS clearer with short pauses between formation, numbers, and tags.
+ * @param {string} call
+ * @param {{ preferPlainH?: boolean }} [opts] - iPhone: plain "H" is clear; desktop often says "capital H" so use "Aitch"
+ */
+export function speakableCall(call, opts = {}) {
+  // iOS Safari: plain H. Desktop Chrome/Safari: "Aitch" avoids "capital H".
+  const sayH = opts.preferPlainH ? 'H' : 'Aitch'
+
   return String(call)
     .replace(/\bHazer\b/gi, 'Hazer')
     .replace(/\bLazer\b/gi, 'Lazer')
@@ -214,11 +219,15 @@ export function speakableCall(call) {
     // Written commas between tags → same slot pause
     .replace(/,\s*/g, ' ... ')
     .replace(/(?:\s*\.\.\.\s*)+/g, ' ... ')
-    // Position letters as their own slot — phonetic so voices don't say "capital …"
-    .replace(/\b([HLRXZ])\b/gi, (_, ch) => POSITION_LETTER_SAY[ch.toUpperCase()] || ch)
-    // Older audio strings may still say "Aitch" / "Halfback"
-    .replace(/\bAitch\b/gi, 'H')
-    .replace(/\bHalfback\b/gi, 'H')
+    // Position letters as their own slot
+    .replace(/\b([HLRXZ])\b/gi, (_, ch) => {
+      const up = ch.toUpperCase()
+      if (up === 'H') return sayH
+      return POSITION_LETTER_SAY[up] || ch
+    })
+    // Normalize older / cross-platform forms for H
+    .replace(/\bHalfback\b/gi, sayH)
+    .replace(/\bAitch\b/gi, sayH)
     .trim()
 }
 

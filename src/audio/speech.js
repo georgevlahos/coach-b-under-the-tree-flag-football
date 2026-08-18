@@ -6,18 +6,56 @@ let enabled = false
 /** @type {SpeechSynthesisVoice | null} */
 let preferredVoice = null
 
-const DEFAULT_RATE = 0.78
-/** Slightly slower — calm sideline cadence for play calls */
-const PLAY_CALL_RATE = 0.551
-const FEEDBACK_RATE = 0.82
+/** Desktop / non-iOS defaults */
+const DEFAULT_RATE = 0.88
+const PLAY_CALL_RATE = 0.78
+const FEEDBACK_RATE = 0.92
 const DEFAULT_PITCH = 1.0
-/** Natural pitch for a clear, friendly play-call voice */
-const PLAY_CALL_PITCH = 1.05
-/** Extra hush between play-call slots (formation / numbers / tags) — does not change speaking rate */
-const PLAY_CALL_SLOT_GAP_MS = 180
+const PLAY_CALL_PITCH = 1.0
+const PLAY_CALL_SLOT_GAP_MS = 120
+
+/**
+ * iOS Safari speaks slower/mufflier at the same rate values — use a clearer profile.
+ * Also prefer one continuous utterance (comma pauses) over many tiny slots.
+ */
+const IOS_DEFAULT_RATE = 1.0
+const IOS_PLAY_CALL_RATE = 0.98
+const IOS_FEEDBACK_RATE = 1.05
+const IOS_PLAY_CALL_SLOT_GAP_MS = 70
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** iPhone / iPad (incl. iPadOS desktop UA) */
+function isAppleMobile() {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  if (/iPhone|iPad|iPod/i.test(ua)) return true
+  // iPadOS 13+ can report as MacIntel with touch
+  return navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1
+}
+
+function ratesForDevice() {
+  if (isAppleMobile()) {
+    return {
+      defaultRate: IOS_DEFAULT_RATE,
+      playCallRate: IOS_PLAY_CALL_RATE,
+      feedbackRate: IOS_FEEDBACK_RATE,
+      playCallPitch: 1.0,
+      slotGapMs: IOS_PLAY_CALL_SLOT_GAP_MS,
+      /** One utterance reads clearer than many slow micro-slots on Safari */
+      playCallSingleUtterance: true,
+    }
+  }
+  return {
+    defaultRate: DEFAULT_RATE,
+    playCallRate: PLAY_CALL_RATE,
+    feedbackRate: FEEDBACK_RATE,
+    playCallPitch: PLAY_CALL_PITCH,
+    slotGapMs: PLAY_CALL_SLOT_GAP_MS,
+    playCallSingleUtterance: false,
+  }
 }
 
 export function isSpeechSupported() {
@@ -39,15 +77,14 @@ export function setAudioMode(on) {
 
 /**
  * Prefer a warm US-English female coach voice.
- * Note: browsers don’t expose a real “Chicago accent” voice — we pick the
- * warmest available American English female option on the device.
+ * On Apple devices, favor Enhanced / clearer system voices over muffled compact ones.
  */
 function scoreVoice(voice) {
   const name = voice.name || ''
   const lang = voice.lang || ''
   if (!/^en([-_]|$)/i.test(lang)) return -100
 
-  // Skip novelty / robotic Mac voices
+  // Skip novelty / robotic Mac voices (compact is especially muffled on iOS)
   if (/compact|eloquence|novelty|whisper|zarvox|trinoids|bad news|good news|boing|bubbles|cellos|albert|bahh|bells|boiler|fred|junior|pipe organ|princess|ralph|superstar|deranged|hysterical|jester|organ|sinbad|whisper/i.test(name)) {
     return -50
   }
@@ -67,9 +104,9 @@ function scoreVoice(voice) {
   if (/female|woman|\(female\)/i.test(name)) {
     score += 50
   }
-  // Enhanced / natural engines sound much warmer than compact system voices
+  // Enhanced / natural engines sound much clearer than compact system voices
   if (/natural|premium|enhanced|neural|wavenet|studio|super|quality/i.test(name)) {
-    score += 30
+    score += 40
   }
   if (/en-US|en_US|english \(us\)|english united states|american/i.test(`${lang} ${name}`)) {
     score += 20
@@ -77,6 +114,10 @@ function scoreVoice(voice) {
   // Soft preference for names that usually sound clearer / friendlier on Apple & Google
   if (/samantha|nicky|ava|allison|zoe|aria|jenny|salli|joanna/i.test(name)) {
     score += 20
+  }
+  // On iPhone, Nicky / Samantha Enhanced tend to cut through better than soft defaults
+  if (isAppleMobile() && /nicky|samantha|ava/i.test(name)) {
+    score += 15
   }
   // Down-rank male coach voices so they don’t win
   if (/male|man|\(male\)|aaron|alex|tom|nathan|evan|matthew|guy|davis|tony|justin|joey|noah|bruce|gordon|lee|rocko|reed|eddy|grandpa/i.test(name) && !/female|woman/i.test(name)) {
@@ -153,12 +194,15 @@ export async function speak(text, opts = {}) {
 
   await ensureVoicesReady()
   const voice = preferredVoice || pickFriendlyVoice()
+  const profile = ratesForDevice()
 
   return new Promise((resolve) => {
     if (opts.cancel !== false) window.speechSynthesis.cancel()
     const utter = new SpeechSynthesisUtterance(text)
-    utter.rate = opts.rate ?? DEFAULT_RATE
+    utter.rate = opts.rate ?? profile.defaultRate
     utter.pitch = opts.pitch ?? DEFAULT_PITCH
+    // iOS sometimes starts quiet until a speak() after a user gesture — keep volume max
+    utter.volume = 1
     if (voice) {
       utter.voice = voice
       utter.lang = voice.lang || 'en-US'
@@ -172,8 +216,8 @@ export async function speak(text, opts = {}) {
 }
 
 /**
- * Speak a play call slot-by-slot with a short gap between parts.
- * Rate/pitch stay the same — only the silence between slots grows.
+ * Speak a play call with short pauses between formation / numbers / tags.
+ * On iOS Safari: one clearer utterance (comma pauses) + faster rate.
  * @param {string} text
  * @param {{ force?: boolean }} [opts]
  */
@@ -184,20 +228,22 @@ async function speakPlayCallText(text, opts = {}) {
     .filter(Boolean)
   if (!parts.length) return
 
+  const profile = ratesForDevice()
   const speakOpts = {
-    rate: PLAY_CALL_RATE,
-    pitch: PLAY_CALL_PITCH,
+    rate: profile.playCallRate,
+    pitch: profile.playCallPitch,
     force: opts.force,
   }
 
-  if (parts.length === 1) {
-    return speak(parts[0], speakOpts)
+  // iOS: continuous call with comma pauses — avoids muffled micro-utterances
+  if (profile.playCallSingleUtterance || parts.length === 1) {
+    return speak(parts.join(', '), speakOpts)
   }
 
   if (window.speechSynthesis) window.speechSynthesis.cancel()
   for (let i = 0; i < parts.length; i++) {
     await speak(parts[i], { ...speakOpts, cancel: false })
-    if (i < parts.length - 1) await delay(PLAY_CALL_SLOT_GAP_MS)
+    if (i < parts.length - 1) await delay(profile.slotGapMs)
   }
 }
 
@@ -211,10 +257,11 @@ export function speakQuestion(question) {
   const raw = question.audioPrompt || question.prompt || ''
   const text = String(raw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   if (!text) return Promise.resolve()
+  const profile = ratesForDevice()
   const isPlayCall = question.category === 'play-calls'
   if (isPlayCall) return speakPlayCallText(speakableCall(text))
   return speak(text, {
-    rate: DEFAULT_RATE,
+    rate: profile.defaultRate,
     pitch: DEFAULT_PITCH,
   })
 }
@@ -233,10 +280,11 @@ export function replayQuestionAudio(question) {
   const raw = question?.audioPrompt || question?.prompt || ''
   const text = String(raw).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   if (!text) return Promise.resolve()
+  const profile = ratesForDevice()
   const isPlayCall = question?.category === 'play-calls'
   if (isPlayCall) return speakPlayCallText(speakableCall(text), { force: true })
   return speak(text, {
-    rate: DEFAULT_RATE,
+    rate: profile.defaultRate,
     pitch: DEFAULT_PITCH,
     force: true,
   })
@@ -257,5 +305,6 @@ export function speakFeedback(correct, consecutiveCorrect = 0) {
     phrases = ['Nice!', 'That\'s right!', 'You got it!']
   }
   const text = phrases[Math.floor(Math.random() * phrases.length)]
-  return speak(text, { rate: FEEDBACK_RATE })
+  const profile = ratesForDevice()
+  return speak(text, { rate: profile.feedbackRate })
 }
